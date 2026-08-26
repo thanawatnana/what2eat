@@ -1,61 +1,81 @@
 import { useEffect, useState } from 'react';
-import { Alert, Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../supabase';
 
-const AVATAR_KEY = 'user_avatar_';
+const AVATAR_CACHE_KEY = 'avatar_url_';
 
 export default function SettingsScreen({ navigation }) {
   const { user, logout } = useAuth();
   const [avatar, setAvatar] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
-  // โหลดรูปที่บันทึกไว้
+  // โหลด URL รูปจาก Supabase Storage (หรือ cache)
   useEffect(() => {
     if (!user) return;
-    AsyncStorage.getItem(AVATAR_KEY + user.id).then(uri => {
-      if (uri) setAvatar(uri);
+    // โหลดจาก cache ก่อน (เร็ว)
+    AsyncStorage.getItem(AVATAR_CACHE_KEY + user.id).then(cachedUrl => {
+      if (cachedUrl) setAvatar(cachedUrl);
     });
+    // แล้วค่อย check จาก Supabase Storage จริง
+    const path = `${user.id}/avatar.jpg`;
+    const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+    if (data?.publicUrl) {
+      // เพิ่ม timestamp เพื่อ bust cache กรณีอัปเดตรูปใหม่
+      const url = data.publicUrl + '?t=' + user.id.slice(0, 8);
+      setAvatar(url);
+    }
   }, [user]);
 
-  // เลือกรูปจาก Gallery
-  const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('ไม่ได้รับสิทธิ์', 'กรุณาอนุญาตให้เข้าถึงรูปภาพในการตั้งค่า');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
-    });
-    if (!result.canceled && result.assets[0]) {
-      const uri = result.assets[0].uri;
-      setAvatar(uri);
-      await AsyncStorage.setItem(AVATAR_KEY + user.id, uri);
+  // อัปโหลดรูปไป Supabase Storage
+  const uploadToSupabase = async (uri) => {
+    setUploading(true);
+    try {
+      const path = `${user.id}/avatar.jpg`;
+      // แปลง uri เป็น blob
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      const { error } = await supabase.storage
+        .from('avatars')
+        .upload(path, blob, { contentType: 'image/jpeg', upsert: true });
+
+      if (error) throw error;
+
+      // ดึง public URL หลัง upload สำเร็จ
+      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+      const url = data.publicUrl + '?bust=' + Date.now();
+      setAvatar(url);
+      // cache ไว้ใน AsyncStorage
+      await AsyncStorage.setItem(AVATAR_CACHE_KEY + user.id, url);
+      Alert.alert('✅', 'อัปโหลดรูปสำเร็จ!');
+    } catch (err) {
+      Alert.alert('Error', err.message);
+    } finally {
+      setUploading(false);
     }
   };
 
-  // ถ่ายรูปใหม่จากกล้อง
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') { Alert.alert('ไม่ได้รับสิทธิ์', 'กรุณาอนุญาตให้เข้าถึงรูปภาพ'); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true, aspect: [1, 1], quality: 0.7,
+    });
+    if (!result.canceled && result.assets[0]) await uploadToSupabase(result.assets[0].uri);
+  };
+
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('ไม่ได้รับสิทธิ์', 'กรุณาอนุญาตให้เข้าถึงกล้อง');
-      return;
-    }
+    if (status !== 'granted') { Alert.alert('ไม่ได้รับสิทธิ์', 'กรุณาอนุญาตให้เข้าถึงกล้อง'); return; }
     const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
+      allowsEditing: true, aspect: [1, 1], quality: 0.7,
     });
-    if (!result.canceled && result.assets[0]) {
-      const uri = result.assets[0].uri;
-      setAvatar(uri);
-      await AsyncStorage.setItem(AVATAR_KEY + user.id, uri);
-    }
+    if (!result.canceled && result.assets[0]) await uploadToSupabase(result.assets[0].uri);
   };
 
   const handleChangePhoto = () => {
@@ -65,6 +85,7 @@ export default function SettingsScreen({ navigation }) {
       { text: '🖼️ เลือกจาก Gallery', onPress: pickImage },
     ]);
   };
+
 
   const handleLogout = () => {
     Alert.alert('ออกจากระบบ', 'คุณต้องการออกจากระบบหรือไม่?', [
@@ -94,7 +115,7 @@ export default function SettingsScreen({ navigation }) {
 
         {/* รูปโปรไฟล์ */}
         <View style={styles.avatarSection}>
-          <TouchableOpacity onPress={handleChangePhoto} activeOpacity={0.8}>
+          <TouchableOpacity onPress={handleChangePhoto} activeOpacity={0.8} disabled={uploading}>
             <View style={styles.avatarWrapper}>
               {avatar ? (
                 <Image source={{ uri: avatar }} style={styles.avatarImg} />
@@ -104,7 +125,10 @@ export default function SettingsScreen({ navigation }) {
                 </View>
               )}
               <View style={styles.editBadge}>
-                <Text style={styles.editBadgeText}>📷</Text>
+                {uploading
+                  ? <ActivityIndicator size="small" color={COLORS.white} />
+                  : <Text style={styles.editBadgeText}>📷</Text>
+                }
               </View>
             </View>
           </TouchableOpacity>
