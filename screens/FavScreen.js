@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, FlatList, TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useState } from 'react';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { COLORS } from '../constants/theme';
 
 export default function FavScreen({ navigation }) {
   const [favList, setFavList] = useState([]);
 
+  // TODO: Supabase -> await supabase.from('favorites').select('*')
   const loadFavorites = async () => {
     try {
       const storedFavs = await AsyncStorage.getItem('favorites');
@@ -24,6 +25,7 @@ export default function FavScreen({ navigation }) {
     return unsubscribe;
   }, [navigation]);
 
+  // TODO: Supabase -> await supabase.from('favorites').delete().eq('id', id)
   const removeFavorite = async (id) => {
     const updatedFavs = favList.filter(item => item.id !== id);
     setFavList(updatedFavs);
@@ -51,33 +53,35 @@ export default function FavScreen({ navigation }) {
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
         />
       ) : (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyEmoji}>💔</Text>
-          <Text style={styles.emptyText}>No favorites yet.</Text>
-          <Text style={styles.emptySubText}>Save your favorite meals here!</Text>
+          <Text style={styles.emptyText}>ยังไม่มีเมนูโปรด</Text>
+          <Text style={styles.emptySubText}>เจอเมนูที่ถูกใจ อย่าลืมกดหัวใจไว้นะ!</Text>
         </View>
       )}
     </View>
   );
 }
 
+// ... styles 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   listContainer: { padding: 20 },
   card: {
-    backgroundColor: COLORS.white, flexDirection: 'row', padding: 15, borderRadius: 15, marginBottom: 15, alignItems: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3, elevation: 2,
+    backgroundColor: COLORS.white, flexDirection: 'row', padding: 18, borderRadius: 20, marginBottom: 15, alignItems: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 5, elevation: 3,
   },
-  emoji: { fontSize: 40, marginRight: 15 },
+  emoji: { fontSize: 45, marginRight: 18 },
   info: { flex: 1 },
   name: { fontSize: 18, fontWeight: 'bold', color: COLORS.textDark, marginBottom: 5 },
-  category: { fontSize: 14, color: 'gray', fontWeight: 'bold' },
-  removeBtn: { padding: 10 },
-  removeBtnText: { fontSize: 18 },
+  category: { fontSize: 14, color: '#888', fontWeight: '600' },
+  removeBtn: { padding: 12, backgroundColor: '#FFF0F0', borderRadius: 15 },
+  removeBtnText: { fontSize: 16 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyEmoji: { fontSize: 60, marginBottom: 15 },
+  emptyEmoji: { fontSize: 70, marginBottom: 15 },
   emptyText: { fontSize: 20, fontWeight: 'bold', color: COLORS.secondary },
-  emptySubText: { fontSize: 14, color: 'gray', marginTop: 5 }
+  emptySubText: { fontSize: 16, color: 'gray', marginTop: 8 }
 });

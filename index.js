@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler'; // ต้องอยู่บรรทัดแรกสุดเสมอ
 import { registerRootComponent } from 'expo';
 
 import App from './App';

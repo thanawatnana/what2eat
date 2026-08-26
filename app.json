@@ -1,5 +1,6 @@
 {
   "expo": {
+    "main": "index.js",
     "name": "what2eat",
     "slug": "snack-3357c523-5440-4491-af9d-56bf859cc73e",
     "version": "1.0.0",
