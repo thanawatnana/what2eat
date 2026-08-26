@@ -1,17 +1,22 @@
 import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { COLORS } from '../constants/theme';
+import { useAuth } from '../context/AuthContext';
 
 export default function HomeScreen({ navigation }) {
+  const { user } = useAuth();
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* ปุ่มเปิด Drawer แทน header */}
+      {/* ปุ่มเปิด Drawer */}
       <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.openDrawer()}>
         <Text style={styles.menuIcon}>☰</Text>
       </TouchableOpacity>
 
       <View style={styles.headerContainer}>
         <Text style={styles.mainTitle}>What2Eat</Text>
-        <Text style={styles.subtitle}>วันนี้กินอะไรดี? 🤔</Text>
+        <Text style={styles.subtitle}>
+          {user ? `สวัสดี, ${user.name_account} 👋` : 'วันนี้กินอะไรดี? 🤔'}
+        </Text>
       </View>
 
       <View style={styles.gridContainer}>
@@ -53,4 +58,5 @@ const styles = StyleSheet.create({
   },
   boxEmoji: { fontSize: 50, marginBottom: 12 },
   boxText: { color: COLORS.white, fontSize: 16, fontWeight: 'bold' },
-});
+});
+
