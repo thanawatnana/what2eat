@@ -1,49 +1,50 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useState } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+﻿import React, { useState, useEffect, useCallback } from 'react';
+import { StyleSheet, Text, View, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { COLORS } from '../constants/theme';
+import { supabase } from '../supabase';
+import { useAuth } from '../context/AuthContext';
 
 export default function FavScreen({ navigation }) {
+  const { user } = useAuth();
   const [favList, setFavList] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // TODO: Supabase -> await supabase.from('favorites').select('*')
-  const loadFavorites = async () => {
-    try {
-      const storedFavs = await AsyncStorage.getItem('favorites');
-      if (storedFavs) {
-        setFavList(JSON.parse(storedFavs));
-      }
-    } catch (error) {
-      console.error("Failed to load favorites", error);
-    }
-  };
+  const loadFavorites = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('favorites')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+    if (!error) setFavList(data || []);
+    setLoading(false);
+  }, [user.id]);
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      loadFavorites();
-    });
+    const unsubscribe = navigation.addListener('focus', loadFavorites);
     return unsubscribe;
-  }, [navigation]);
+  }, [navigation, loadFavorites]);
 
-  // TODO: Supabase -> await supabase.from('favorites').delete().eq('id', id)
   const removeFavorite = async (id) => {
-    const updatedFavs = favList.filter(item => item.id !== id);
-    setFavList(updatedFavs);
-    await AsyncStorage.setItem('favorites', JSON.stringify(updatedFavs));
+    const { error } = await supabase.from('favorites').delete().eq('id', id);
+    if (!error) setFavList(prev => prev.filter(item => item.id !== id));
+    else Alert.alert('Error', error.message);
   };
 
   const renderItem = ({ item }) => (
     <View style={styles.card}>
-      <Text style={styles.emoji}>{item.emoji}</Text>
+      <Text style={styles.emoji}>{item.food_emoji}</Text>
       <View style={styles.info}>
-        <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.category}>{item.category}</Text>
+        <Text style={styles.name}>{item.food_name}</Text>
+        <Text style={styles.category}>{item.food_category}</Text>
       </View>
       <TouchableOpacity style={styles.removeBtn} onPress={() => removeFavorite(item.id)}>
         <Text style={styles.removeBtnText}>❌</Text>
       </TouchableOpacity>
     </View>
   );
+
+  if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={COLORS.primary} /></View>;
 
   return (
     <View style={styles.container}>
@@ -53,35 +54,34 @@ export default function FavScreen({ navigation }) {
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={styles.listContainer}
-          showsVerticalScrollIndicator={false}
         />
       ) : (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyEmoji}>💔</Text>
           <Text style={styles.emptyText}>ยังไม่มีเมนูโปรด</Text>
-          <Text style={styles.emptySubText}>เจอเมนูที่ถูกใจ อย่าลืมกดหัวใจไว้นะ!</Text>
+          <Text style={styles.emptySubText}>ลองสุ่มเมนูแล้วกดบันทึกดูนะ!</Text>
         </View>
       )}
     </View>
   );
 }
 
-// ... styles 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background },
   listContainer: { padding: 20 },
   card: {
-    backgroundColor: COLORS.white, flexDirection: 'row', padding: 18, borderRadius: 20, marginBottom: 15, alignItems: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 5, elevation: 3,
+    backgroundColor: COLORS.white, flexDirection: 'row', padding: 15, borderRadius: 15, marginBottom: 15, alignItems: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3, elevation: 2,
   },
-  emoji: { fontSize: 45, marginRight: 18 },
+  emoji: { fontSize: 40, marginRight: 15 },
   info: { flex: 1 },
-  name: { fontSize: 18, fontWeight: 'bold', color: COLORS.textDark, marginBottom: 5 },
-  category: { fontSize: 14, color: '#888', fontWeight: '600' },
-  removeBtn: { padding: 12, backgroundColor: '#FFF0F0', borderRadius: 15 },
-  removeBtnText: { fontSize: 16 },
+  name: { fontSize: 17, fontWeight: 'bold', color: COLORS.textDark, marginBottom: 4 },
+  category: { fontSize: 13, color: 'gray', fontWeight: '600' },
+  removeBtn: { padding: 10 },
+  removeBtnText: { fontSize: 18 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyEmoji: { fontSize: 70, marginBottom: 15 },
+  emptyEmoji: { fontSize: 60, marginBottom: 15 },
   emptyText: { fontSize: 20, fontWeight: 'bold', color: COLORS.secondary },
-  emptySubText: { fontSize: 16, color: 'gray', marginTop: 8 }
+  emptySubText: { fontSize: 14, color: 'gray', marginTop: 5 },
 });
