@@ -95,14 +95,14 @@ export default function AllFoodsScreen({ navigation }) {
     if (!result.canceled && result.assets[0]) setUri(result.assets[0].uri);
   };
 
-  // ── Upload Image to Supabase Storage ─────────────────────────────────────
+  // ── Upload Image to Supabase Storage (Fix 5: arrayBuffer ทำงานได้ถูกต้องบน Expo แต่ blob() เปล่า)
   const uploadFoodImage = async (uri) => {
     const path = `user_foods/${user.id}/${Date.now()}.jpg`;
     const response = await fetch(uri);
-    const blob = await response.blob();
+    const arrayBuffer = await response.arrayBuffer();
     const { error } = await supabase.storage
       .from('food-images')
-      .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+      .upload(path, arrayBuffer, { contentType: 'image/jpeg', upsert: true });
     if (error) throw error;
     const { data } = supabase.storage.from('food-images').getPublicUrl(path);
     return data.publicUrl;
@@ -164,30 +164,46 @@ export default function AllFoodsScreen({ navigation }) {
     if (!editName.trim()) { Alert.alert('⚠️', 'กรุณากรอกชื่อเมนู'); return; }
     setUpdatingFood(true);
     try {
-      let imageUrl = editingFood?.image_url || null;  // ใช้รูปเดิมถ้าไม่ได้เลือกใหม่
+      let imageUrl = editingFood?.image_url || null;
       if (editImageUri) imageUrl = await uploadFoodImage(editImageUri);
 
       const finalCategory = editCategory === 'อื่นๆ'
         ? (editCustomCategory.trim() || 'อื่นๆ')
         : editCategory;
 
-      const { error } = await supabase.from('user_foods').update({
+      const updatedData = {
         name: editName.trim(),
         image_url: imageUrl,
         category: finalCategory,
         price: editPrice.trim() || '-',
-      }).eq('id', editingFood.id);
+      };
 
-      if (error) { Alert.alert('Error', error.message); return; }
+      const { data: updated, error } = await supabase
+        .from('user_foods')
+        .update(updatedData)
+        .eq('id', editingFood.id)
+        .select(); // ทำให้รู้ว่า update กี่ rows จริง
+
+      if (error) {
+        Alert.alert('❌ Error', error.message);
+        return;
+      }
+
+      // อัปเดต local state ทันที (ไม่ต้องรอ reload)
+      setFoods(prev => prev.map(f =>
+        f.id === editingFood.id ? { ...f, ...updatedData } : f
+      ));
+
       Alert.alert('✅', 'แก้ไขเมนูสำเร็จ!');
       setEditModalVisible(false);
       loadFoods();
     } catch (err) {
-      Alert.alert('Error', err.message);
+      Alert.alert('❌ Error', err.message);
     } finally {
       setUpdatingFood(false);
     }
   };
+
 
   // ── Render แต่ละ item ─────────────────────────────────────────────────────
   const renderItem = ({ item }) => (
@@ -243,110 +259,114 @@ export default function AllFoodsScreen({ navigation }) {
 
       {/* ── Modal: Add Food ── */}
       <Modal visible={addModalVisible} transparent animationType="slide" onRequestClose={() => { resetAddForm(); setAddModalVisible(false); }}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <ScrollView contentContainerStyle={{ justifyContent: 'flex-end' }} keyboardShouldPersistTaps="handled">
-            <View style={styles.modalCard}>
-              <Text style={styles.modalTitle}>➕ เพิ่มเมนูส่วนตัว</Text>
+        <View style={styles.modalOverlay}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <ScrollView keyboardShouldPersistTaps="handled" bounces={false}>
+              <View style={styles.modalCard}>
+                <Text style={styles.modalTitle}>➕ เพิ่มเมนูส่วนตัว</Text>
 
-              <Text style={styles.modalLabel}>รูปภาพเมนู</Text>
-              <TouchableOpacity style={styles.imagePicker} onPress={() => pickImage(setNewImageUri)}>
-                {newImageUri
-                  ? <Image source={{ uri: newImageUri }} style={styles.imagePreview} />
-                  : <View style={styles.imagePlaceholder}><Text style={{ fontSize: 32 }}>📷</Text><Text style={styles.imagePlaceholderText}>แตะเพื่อเลือกรูป</Text></View>
-                }
-              </TouchableOpacity>
+                <Text style={styles.modalLabel}>รูปภาพเมนู</Text>
+                <TouchableOpacity style={styles.imagePicker} onPress={() => pickImage(setNewImageUri)}>
+                  {newImageUri
+                    ? <Image source={{ uri: newImageUri }} style={styles.imagePreview} />
+                    : <View style={styles.imagePlaceholder}><Text style={{ fontSize: 32 }}>📷</Text><Text style={styles.imagePlaceholderText}>แตะเพื่อเลือกรูป</Text></View>
+                  }
+                </TouchableOpacity>
 
-              <Text style={styles.modalLabel}>ชื่อเมนู *</Text>
-              <TextInput style={styles.modalInput} placeholder="เช่น ข้าวสวย" placeholderTextColor="#aaa" value={newName} onChangeText={setNewName} />
+                <Text style={styles.modalLabel}>ชื่อเมนู *</Text>
+                <TextInput style={styles.modalInput} placeholder="เช่น ข้าวสวย" placeholderTextColor="#aaa" value={newName} onChangeText={setNewName} />
 
-              <Text style={styles.modalLabel}>หมวดหมู่</Text>
-              <TouchableOpacity style={styles.dropdownBtn} onPress={() => setAddCategoryOpen(o => !o)}>
-                <Text style={styles.dropdownBtnText}>{newCategory}</Text>
-                <Text style={styles.dropdownArrow}>{addCategoryOpen ? '▲' : '▼'}</Text>
-              </TouchableOpacity>
-              {addCategoryOpen && (
-                <View style={styles.dropdownList}>
-                  {CATEGORIES.map(cat => (
-                    <TouchableOpacity key={cat} style={[styles.dropdownItem, newCategory === cat && styles.dropdownItemActive]}
-                      onPress={() => { setNewCategory(cat); setAddCategoryOpen(false); }}>
-                      <Text style={[styles.dropdownItemText, newCategory === cat && styles.dropdownItemTextActive]}>{cat}</Text>
-                    </TouchableOpacity>
-                  ))}
+                <Text style={styles.modalLabel}>หมวดหมู่</Text>
+                <TouchableOpacity style={styles.dropdownBtn} onPress={() => setAddCategoryOpen(o => !o)}>
+                  <Text style={styles.dropdownBtnText}>{newCategory}</Text>
+                  <Text style={styles.dropdownArrow}>{addCategoryOpen ? '▲' : '▼'}</Text>
+                </TouchableOpacity>
+                {addCategoryOpen && (
+                  <View style={styles.dropdownList}>
+                    {CATEGORIES.map(cat => (
+                      <TouchableOpacity key={cat} style={[styles.dropdownItem, newCategory === cat && styles.dropdownItemActive]}
+                        onPress={() => { setNewCategory(cat); setAddCategoryOpen(false); }}>
+                        <Text style={[styles.dropdownItemText, newCategory === cat && styles.dropdownItemTextActive]}>{cat}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+                {newCategory === 'อื่นๆ' && (
+                  <TextInput style={[styles.modalInput, { marginTop: 8 }]} placeholder="ระบุหมวดหมู่..." placeholderTextColor="#aaa" value={newCustomCategory} onChangeText={setNewCustomCategory} />
+                )}
+
+                <Text style={styles.modalLabel}>ราคา (ไม่บังคับ)</Text>
+                <TextInput style={styles.modalInput} placeholder="เช่น 50-80" placeholderTextColor="#aaa" value={newPrice} onChangeText={setNewPrice} />
+
+                <View style={styles.modalBtnRow}>
+                  <TouchableOpacity style={styles.modalCancelBtn} onPress={() => { resetAddForm(); setAddModalVisible(false); }}>
+                    <Text style={styles.modalCancelText}>ยกเลิก</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.modalSaveBtn} onPress={handleAddFood} disabled={savingFood}>
+                    {savingFood ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.modalSaveText}>บันทึก</Text>}
+                  </TouchableOpacity>
                 </View>
-              )}
-              {newCategory === 'อื่นๆ' && (
-                <TextInput style={[styles.modalInput, { marginTop: 8 }]} placeholder="ระบุหมวดหมู่..." placeholderTextColor="#aaa" value={newCustomCategory} onChangeText={setNewCustomCategory} />
-              )}
-
-              <Text style={styles.modalLabel}>ราคา (ไม่บังคับ)</Text>
-              <TextInput style={styles.modalInput} placeholder="เช่น 50-80" placeholderTextColor="#aaa" value={newPrice} onChangeText={setNewPrice} />
-
-              <View style={styles.modalBtnRow}>
-                <TouchableOpacity style={styles.modalCancelBtn} onPress={() => { resetAddForm(); setAddModalVisible(false); }}>
-                  <Text style={styles.modalCancelText}>ยกเลิก</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.modalSaveBtn} onPress={handleAddFood} disabled={savingFood}>
-                  {savingFood ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.modalSaveText}>บันทึก</Text>}
-                </TouchableOpacity>
               </View>
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </View>
       </Modal>
 
       {/* ── Modal: Edit Food ── */}
       <Modal visible={editModalVisible} transparent animationType="slide" onRequestClose={() => setEditModalVisible(false)}>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <ScrollView contentContainerStyle={{ justifyContent: 'flex-end' }} keyboardShouldPersistTaps="handled">
-            <View style={styles.modalCard}>
-              <Text style={styles.modalTitle}>✏️ แก้ไขเมนู</Text>
+        <View style={styles.modalOverlay}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <ScrollView keyboardShouldPersistTaps="handled" bounces={false}>
+              <View style={styles.modalCard}>
+                <Text style={styles.modalTitle}>✏️ แก้ไขเมนู</Text>
 
-              <Text style={styles.modalLabel}>รูปภาพเมนู (แตะเพื่อเปลี่ยน)</Text>
-              <TouchableOpacity style={styles.imagePicker} onPress={() => pickImage(setEditImageUri)}>
-                {editImageUri
-                  ? <Image source={{ uri: editImageUri }} style={styles.imagePreview} />
-                  : editingFood?.image_url
-                    ? <Image source={{ uri: editingFood.image_url }} style={styles.imagePreview} />
-                    : <View style={styles.imagePlaceholder}><Text style={{ fontSize: 32 }}>📷</Text><Text style={styles.imagePlaceholderText}>แตะเพื่อเลือกรูปใหม่</Text></View>
-                }
-              </TouchableOpacity>
+                <Text style={styles.modalLabel}>รูปภาพเมนู (แตะเพื่อเปลี่ยน)</Text>
+                <TouchableOpacity style={styles.imagePicker} onPress={() => pickImage(setEditImageUri)}>
+                  {editImageUri
+                    ? <Image source={{ uri: editImageUri }} style={styles.imagePreview} />
+                    : editingFood?.image_url
+                      ? <Image source={{ uri: editingFood.image_url }} style={styles.imagePreview} />
+                      : <View style={styles.imagePlaceholder}><Text style={{ fontSize: 32 }}>📷</Text><Text style={styles.imagePlaceholderText}>แตะเพื่อเลือกรูปใหม่</Text></View>
+                  }
+                </TouchableOpacity>
 
-              <Text style={styles.modalLabel}>ชื่อเมนู *</Text>
-              <TextInput style={styles.modalInput} placeholderTextColor="#aaa" value={editName} onChangeText={setEditName} />
+                <Text style={styles.modalLabel}>ชื่อเมนู *</Text>
+                <TextInput style={styles.modalInput} placeholderTextColor="#aaa" value={editName} onChangeText={setEditName} />
 
-              <Text style={styles.modalLabel}>หมวดหมู่</Text>
-              <TouchableOpacity style={styles.dropdownBtn} onPress={() => setEditCategoryOpen(o => !o)}>
-                <Text style={styles.dropdownBtnText}>{editCategory}</Text>
-                <Text style={styles.dropdownArrow}>{editCategoryOpen ? '▲' : '▼'}</Text>
-              </TouchableOpacity>
-              {editCategoryOpen && (
-                <View style={styles.dropdownList}>
-                  {CATEGORIES.map(cat => (
-                    <TouchableOpacity key={cat} style={[styles.dropdownItem, editCategory === cat && styles.dropdownItemActive]}
-                      onPress={() => { setEditCategory(cat); setEditCategoryOpen(false); }}>
-                      <Text style={[styles.dropdownItemText, editCategory === cat && styles.dropdownItemTextActive]}>{cat}</Text>
-                    </TouchableOpacity>
-                  ))}
+                <Text style={styles.modalLabel}>หมวดหมู่</Text>
+                <TouchableOpacity style={styles.dropdownBtn} onPress={() => setEditCategoryOpen(o => !o)}>
+                  <Text style={styles.dropdownBtnText}>{editCategory}</Text>
+                  <Text style={styles.dropdownArrow}>{editCategoryOpen ? '▲' : '▼'}</Text>
+                </TouchableOpacity>
+                {editCategoryOpen && (
+                  <View style={styles.dropdownList}>
+                    {CATEGORIES.map(cat => (
+                      <TouchableOpacity key={cat} style={[styles.dropdownItem, editCategory === cat && styles.dropdownItemActive]}
+                        onPress={() => { setEditCategory(cat); setEditCategoryOpen(false); }}>
+                        <Text style={[styles.dropdownItemText, editCategory === cat && styles.dropdownItemTextActive]}>{cat}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+                {editCategory === 'อื่นๆ' && (
+                  <TextInput style={[styles.modalInput, { marginTop: 8 }]} placeholder="ระบุหมวดหมู่..." placeholderTextColor="#aaa" value={editCustomCategory} onChangeText={setEditCustomCategory} />
+                )}
+
+                <Text style={styles.modalLabel}>ราคา</Text>
+                <TextInput style={styles.modalInput} placeholderTextColor="#aaa" value={editPrice} onChangeText={setEditPrice} />
+
+                <View style={styles.modalBtnRow}>
+                  <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setEditModalVisible(false)}>
+                    <Text style={styles.modalCancelText}>ยกเลิก</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.modalSaveBtn} onPress={handleUpdateFood} disabled={updatingFood}>
+                    {updatingFood ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.modalSaveText}>บันทึก</Text>}
+                  </TouchableOpacity>
                 </View>
-              )}
-              {editCategory === 'อื่นๆ' && (
-                <TextInput style={[styles.modalInput, { marginTop: 8 }]} placeholder="ระบุหมวดหมู่..." placeholderTextColor="#aaa" value={editCustomCategory} onChangeText={setEditCustomCategory} />
-              )}
-
-              <Text style={styles.modalLabel}>ราคา</Text>
-              <TextInput style={styles.modalInput} placeholderTextColor="#aaa" value={editPrice} onChangeText={setEditPrice} />
-
-              <View style={styles.modalBtnRow}>
-                <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setEditModalVisible(false)}>
-                  <Text style={styles.modalCancelText}>ยกเลิก</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.modalSaveBtn} onPress={handleUpdateFood} disabled={updatingFood}>
-                  {updatingFood ? <ActivityIndicator color={COLORS.white} /> : <Text style={styles.modalSaveText}>บันทึก</Text>}
-                </TouchableOpacity>
               </View>
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </View>
       </Modal>
     </View>
   );

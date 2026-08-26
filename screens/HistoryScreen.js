@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { COLORS } from '../constants/theme';
-import { supabase } from '../supabase';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../supabase';
 
 export default function HistoryScreen({ navigation }) {
   const { user } = useAuth();
@@ -10,6 +10,7 @@ export default function HistoryScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
 
   const loadHistory = useCallback(async () => {
+    if (!user?.id) return;
     setLoading(true);
     const { data, error } = await supabase
       .from('history')
@@ -18,12 +19,15 @@ export default function HistoryScreen({ navigation }) {
       .order('created_at', { ascending: false });
     if (!error) setHistoryList(data || []);
     setLoading(false);
-  }, [user.id]);
+  }, [user?.id]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', loadHistory);
     return unsubscribe;
   }, [navigation, loadHistory]);
+
+  // Fix 6: Guard ป้องกัน crash ตอน logout
+  if (!user) return null;
 
   const clearHistory = () => {
     Alert.alert('ล้างประวัติ', 'ต้องการซ่อนประวัติทั้งหมดออกจากหน้าจอหรือไม่?\n(ข้อมูลยังคงอยู่ในระบบ)', [
@@ -41,7 +45,8 @@ export default function HistoryScreen({ navigation }) {
     const timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
     return (
       <View style={styles.historyCard}>
-        <Text style={styles.cardEmoji}>{item.food_emoji}</Text>
+        {/* Fix 3: food_emoji ถูกลบออกจาก DB แล้ว ใช้ emoji เริ่มต้นแทน */}
+        <Text style={styles.cardEmoji}>📅</Text>
         <View style={styles.cardInfo}>
           <Text style={styles.resultName}>{item.food_name}</Text>
           <Text style={styles.funcName}>Mode: {item.mode}</Text>

@@ -1,8 +1,8 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+﻿import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { COLORS } from '../constants/theme';
-import { supabase } from '../supabase';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../supabase';
 
 export default function FavScreen({ navigation }) {
   const { user } = useAuth();
@@ -10,6 +10,7 @@ export default function FavScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
 
   const loadFavorites = useCallback(async () => {
+    if (!user?.id) return;
     setLoading(true);
     const { data, error } = await supabase
       .from('favorites')
@@ -18,12 +19,15 @@ export default function FavScreen({ navigation }) {
       .order('created_at', { ascending: false });
     if (!error) setFavList(data || []);
     setLoading(false);
-  }, [user.id]);
+  }, [user?.id]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', loadFavorites);
     return unsubscribe;
   }, [navigation, loadFavorites]);
+
+  // Fix 6: Guard ป้องกัน crash ตอน logout
+  if (!user) return null;
 
   const removeFavorite = async (id) => {
     const { error } = await supabase.from('favorites').delete().eq('id', id);
@@ -33,7 +37,8 @@ export default function FavScreen({ navigation }) {
 
   const renderItem = ({ item }) => (
     <View style={styles.card}>
-      <Text style={styles.emoji}>{item.food_emoji}</Text>
+      {/* Fix 3: food_emoji ถูกลบออกจาก DB แล้ว ใช้ emoji default แทน */}
+      <Text style={styles.emoji}>🍽️</Text>
       <View style={styles.info}>
         <Text style={styles.name}>{item.food_name}</Text>
         <Text style={styles.category}>{item.food_category}</Text>

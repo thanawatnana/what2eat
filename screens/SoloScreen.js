@@ -71,10 +71,10 @@ export default function SoloScreen() {
       const selected = allFoods[Math.floor(Math.random() * allFoods.length)];
       setCurrentFood(selected);
       setIsRolling(false);
+      // บันทึกลง history บน Supabase (Fix 3: ไม่บันทึก food_emoji เพราะ column ถูกลบออกจาก DB แล้ว)
       await supabase.from('history').insert({
         user_id: user.id,
         food_name: selected.name,
-        food_emoji: selected.emoji || '🍽️',
         food_category: selected.category,
         mode: 'solo',
       });
@@ -84,10 +84,10 @@ export default function SoloScreen() {
   // ── บันทึก Favorite ───────────────────────────────────────────
   const saveToFavorites = async () => {
     if (!currentFood) return;
+    // Fix 3: ไม่บันทึก food_emoji เพราะ column ถูกลบออกจาก favorites table แล้ว
     const { error } = await supabase.from('favorites').insert({
       user_id: user.id,
       food_name: currentFood.name,
-      food_emoji: currentFood.emoji || '🍽️',
       food_category: currentFood.category,
     });
     if (error) {
@@ -116,14 +116,15 @@ export default function SoloScreen() {
     }
   };
 
-  // ── Task 3: อัปโหลดรูปไป Supabase Storage ──────────────────────
+  // ── Task 3: อัปโหลดรูปไป Supabase Storage ──────────────────────────
+  // Fix 5: ใช้ arrayBuffer() แทน blob() — blob() มักสร้างไฟล์เปล่าบน React Native โดยไม่มี error
   const uploadFoodImage = async (uri) => {
     const path = `user_foods/${user.id}/${Date.now()}.jpg`;
     const response = await fetch(uri);
-    const blob = await response.blob();
+    const arrayBuffer = await response.arrayBuffer();
     const { error } = await supabase.storage
       .from('food-images')
-      .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
+      .upload(path, arrayBuffer, { contentType: 'image/jpeg', upsert: true });
     if (error) throw error;
     const { data } = supabase.storage.from('food-images').getPublicUrl(path);
     return data.publicUrl;

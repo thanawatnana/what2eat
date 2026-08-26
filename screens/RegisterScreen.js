@@ -13,7 +13,9 @@ import { supabase } from '../supabase';
 import bcrypt from '../utils/bcryptHelper'; // Task 2: ใช้ helper ที่มี fallback
 
 // ─── Email Regex (requires real TLD, e.g. .com .net .th) ─────────────────────
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/;
+// Fix 1: รับเฉพาะ @gmail.com เท่านั้น (ป้องกัน @gmai.com, @gmail.ckm ฯลฯ)
+const EMAIL_REGEX = /^[^\s@]+@gmail\.com$/i;
+
 
 export default function RegisterScreen({ navigation }) {
     const [nameAccount, setNameAccount] = useState('');
@@ -254,15 +256,15 @@ const styles = StyleSheet.create({
         paddingHorizontal: 14, paddingVertical: 11, fontSize: 15,
         color: COLORS.textDark, backgroundColor: '#FAFAFA',
     },
-    // Task 1: Row สำหรับ input + eye icon
+    // Task 1: Row สำหรับ input + eye icon (Fix 2: height คงที่ป้องกัน layout shift)
     inputRow: {
         flexDirection: 'row', alignItems: 'center',
         borderWidth: 1.5, borderColor: '#ddd', borderRadius: 12,
-        backgroundColor: '#FAFAFA', paddingRight: 8,
+        backgroundColor: '#FAFAFA', paddingRight: 8, height: 50,
     },
     inputInner: {
-        flex: 1, paddingHorizontal: 14, paddingVertical: 11,
-        fontSize: 15, color: COLORS.textDark,
+        flex: 1, paddingHorizontal: 14, fontSize: 15,
+        color: COLORS.textDark, height: 50,
     },
     eyeBtn: { padding: 6 },
     eyeIcon: { fontSize: 18 },

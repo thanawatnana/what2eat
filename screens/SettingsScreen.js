@@ -42,12 +42,13 @@ export default function SettingsScreen({ navigation }) {
     setUploading(true);
     try {
       const path = `${user.id}/avatar.jpg`;
+      // Fix 5: ใช้ arrayBuffer() แทน blob() — blob() มักสร้างไฟล์เปล่าบน React Native/Expo
       const response = await fetch(uri);
-      const blob = await response.blob();
+      const arrayBuffer = await response.arrayBuffer();
 
       const { error } = await supabase.storage
         .from('avatars')
-        .upload(path, blob, { contentType: 'image/jpeg', upsert: true });
+        .upload(path, arrayBuffer, { contentType: 'image/jpeg', upsert: true });
 
       if (error) throw error;
 
