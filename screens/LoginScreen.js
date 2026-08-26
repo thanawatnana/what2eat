@@ -78,8 +78,8 @@ export default function LoginScreen({ navigation }) {
                 is_guest: false,
             });
 
-            // 6. Go to Home
-            navigation.replace('Home');
+            // 6. Go to Home (DrawerRoot ครอบ Home อยู่)
+            navigation.replace('DrawerRoot');
 
         } catch (err) {
             setFieldError('general', `เกิดข้อผิดพลาด: ${err.message}`);
@@ -109,7 +109,7 @@ export default function LoginScreen({ navigation }) {
                 is_guest: true,
             });
 
-            navigation.replace('Home');
+            navigation.replace('DrawerRoot');
 
         } catch (err) {
             setFieldError('general', `เกิดข้อผิดพลาด: ${err.message}`);

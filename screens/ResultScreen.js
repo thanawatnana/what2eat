@@ -37,7 +37,7 @@ export default function ResultScreen({ route, navigation }) {
     };
 
     const handleGoHome = () => {
-        navigation.navigate('Home');
+        navigation.navigate('DrawerRoot');
     };
 
     // กรณีไม่มี match (ไม่มีอาหารที่ทุกคน Like)

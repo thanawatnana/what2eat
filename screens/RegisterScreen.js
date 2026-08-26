@@ -115,7 +115,6 @@ export default function RegisterScreen({ navigation }) {
         }
     };
 
-    // ─── UI ─────────────────────────────────────────────────────────────────
     return (
         <SafeAreaView style={styles.safe}>
             <KeyboardAvoidingView
@@ -123,6 +122,11 @@ export default function RegisterScreen({ navigation }) {
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
                 <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+                    {/* ปุ่มย้อนกลับ */}
+                    <TouchableOpacity style={styles.backBtn} onPress={() => navigation.replace('Login')}>
+                        <Text style={styles.backBtnText}>← กลับ</Text>
+                    </TouchableOpacity>
+
                     {/* Header */}
                     <Text style={styles.logo}>What2Eat</Text>
                     <Text style={styles.title}>สมัครสมาชิก</Text>
@@ -217,7 +221,9 @@ export default function RegisterScreen({ navigation }) {
 const styles = StyleSheet.create({
     safe: { flex: 1, backgroundColor: COLORS.background },
     scroll: { flexGrow: 1, alignItems: 'center', paddingHorizontal: 24, paddingBottom: 40 },
-    logo: { fontSize: 38, fontWeight: '900', color: COLORS.secondary, marginTop: 50, letterSpacing: 1 },
+    backBtn: { alignSelf: 'flex-start', marginTop: 10, marginBottom: 5, padding: 8 },
+    backBtnText: { color: COLORS.secondary, fontSize: 15, fontWeight: '700' },
+    logo: { fontSize: 38, fontWeight: '900', color: COLORS.secondary, marginTop: 20, letterSpacing: 1 },
     title: { fontSize: 26, fontWeight: '700', color: COLORS.textDark, marginTop: 8 },
     subtitle: { fontSize: 14, color: COLORS.textDark, opacity: 0.6, marginBottom: 24, marginTop: 4 },
     card: {

@@ -17,7 +17,8 @@ export default function SettingsScreen({ navigation }) {
           style: 'destructive',
           onPress: () => {
             logout();
-            navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+            // ใช้ getParent() เพราะ Settings อยู่ใน Drawer ซึ่งอยู่ใน Stack อีกที
+            navigation.getParent()?.reset({ index: 0, routes: [{ name: 'Login' }] });
           },
         },
       ]
