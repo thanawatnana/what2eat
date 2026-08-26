@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, Text, View, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { COLORS } from '../constants/theme';
 import { supabase } from '../supabase';
@@ -30,7 +30,7 @@ export default function AllFoodsScreen({ navigation }) {
 
   const deleteUserFood = (item) => {
     if (item.source === 'system') { Alert.alert('❌', 'ไม่สามารถลบเมนูของระบบได้'); return; }
-    Alert.alert('ลบเมนู', ต้องการลบ "" หรือไม่?, [
+    Alert.alert('ลบเมนู', 'ต้องการลบ "' + item.name + '" หรือไม่?', [
       { text: 'ยกเลิก', style: 'cancel' },
       {
         text: 'ลบ', style: 'destructive', onPress: async () => {
