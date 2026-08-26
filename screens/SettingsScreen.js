@@ -74,8 +74,15 @@ export default function SettingsScreen({ navigation }) {
         style: 'destructive',
         onPress: () => {
           logout();
-          // getParent() เพราะ Settings อยู่ใน Drawer ซึ่งอยู่ใน Stack อีกที
-          navigation.getParent()?.reset({ index: 0, routes: [{ name: 'Login' }] });
+          // Settings → Drawer → Stack (root)
+          // ต้อง getParent() 2 ครั้งถึงจะถึง Stack ระดับบนสุด
+          const stackNav = navigation.getParent()?.getParent();
+          if (stackNav) {
+            stackNav.reset({ index: 0, routes: [{ name: 'Login' }] });
+          } else {
+            // fallback กรณี navigation structure เปลี่ยน
+            navigation.navigate('Login');
+          }
         },
       },
     ]);
