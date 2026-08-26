@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
-    StyleSheet, Text, View, TextInput, TouchableOpacity,
-    SafeAreaView, ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView, Platform,
+    SafeAreaView, ScrollView,
+    StyleSheet, Text,
+    TextInput, TouchableOpacity,
+    View,
 } from 'react-native';
-import bcrypt from 'bcryptjs';
-import { supabase } from '../supabase';
 import { COLORS } from '../constants/theme';
+import { supabase } from '../supabase';
+import bcrypt from '../utils/bcryptHelper'; // Task 2: ใช้ helper ที่มี fallback
 
 // ─── Email Regex (requires real TLD, e.g. .com .net .th) ─────────────────────
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/;
@@ -16,6 +21,9 @@ export default function RegisterScreen({ navigation }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
+
+    // Task 1: Toggle password visibility
+    const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
     // ─── Per-field error states ──────────────────────────────────────────────
     const [errors, setErrors] = useState({
@@ -89,7 +97,7 @@ export default function RegisterScreen({ navigation }) {
                 return;
             }
 
-            // 3. Hash password (bcrypt, salt rounds = 10)
+            // 3. Hash password — Task 2: bcryptHelper มี fallback ที่ทำงานบน RN
             const salt = await bcrypt.genSalt(10);
             const passwordHash = await bcrypt.hash(password, salt);
 
@@ -172,16 +180,25 @@ export default function RegisterScreen({ navigation }) {
                         />
                         {errors.email ? <Text style={styles.errorText}>⚠️ {errors.email}</Text> : null}
 
-                        {/* ── Password ── */}
+                        {/* ── Password (Task 1: toggle visibility) ── */}
                         <Text style={styles.label}>Password</Text>
-                        <TextInput
-                            style={[styles.input, errors.password ? styles.inputError : null]}
-                            placeholder="อย่างน้อย 6 ตัวอักษร"
-                            placeholderTextColor="#aaa"
-                            value={password}
-                            onChangeText={v => { setPassword(v); setFieldError('password', ''); }}
-                            secureTextEntry
-                        />
+                        <View style={[styles.inputRow, errors.password ? styles.inputError : null]}>
+                            <TextInput
+                                style={styles.inputInner}
+                                placeholder="อย่างน้อย 6 ตัวอักษร"
+                                placeholderTextColor="#aaa"
+                                value={password}
+                                onChangeText={v => { setPassword(v); setFieldError('password', ''); }}
+                                secureTextEntry={!isPasswordVisible}
+                                autoCapitalize="none"
+                            />
+                            <TouchableOpacity
+                                onPress={() => setIsPasswordVisible(v => !v)}
+                                style={styles.eyeBtn}
+                            >
+                                <Text style={styles.eyeIcon}>{isPasswordVisible ? '🙈' : '👁️'}</Text>
+                            </TouchableOpacity>
+                        </View>
                         {errors.password ? <Text style={styles.errorText}>⚠️ {errors.password}</Text> : null}
 
                         {/* ── General Error ── */}
@@ -237,6 +254,18 @@ const styles = StyleSheet.create({
         paddingHorizontal: 14, paddingVertical: 11, fontSize: 15,
         color: COLORS.textDark, backgroundColor: '#FAFAFA',
     },
+    // Task 1: Row สำหรับ input + eye icon
+    inputRow: {
+        flexDirection: 'row', alignItems: 'center',
+        borderWidth: 1.5, borderColor: '#ddd', borderRadius: 12,
+        backgroundColor: '#FAFAFA', paddingRight: 8,
+    },
+    inputInner: {
+        flex: 1, paddingHorizontal: 14, paddingVertical: 11,
+        fontSize: 15, color: COLORS.textDark,
+    },
+    eyeBtn: { padding: 6 },
+    eyeIcon: { fontSize: 18 },
     inputError: { borderColor: '#E74C3C', backgroundColor: '#FFF5F5' },
     errorText: { color: '#E74C3C', fontSize: 12, marginTop: 5, marginLeft: 4, fontWeight: '500' },
     generalErrorBox: {

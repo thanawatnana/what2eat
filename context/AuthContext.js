@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext } from 'react';
+import { createContext, useContext, useState } from 'react';
 
 // ─── Context ────────────────────────────────────────────────────────────────
 const AuthContext = createContext(null);
@@ -9,7 +9,6 @@ export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
 
     const login = (userData) => {
-        // Store the fields the Profile feature will need: id, name_account, username
         setUser({
             id: userData.id,
             name_account: userData.name_account,
@@ -22,8 +21,13 @@ export function AuthProvider({ children }) {
         setUser(null);
     };
 
+    // Task 5: อัปเดตบางฟิลด์ของ user โดยไม่ต้อง login ใหม่ (เช่น name_account)
+    const updateUser = (updates) => {
+        setUser(prev => prev ? { ...prev, ...updates } : prev);
+    };
+
     return (
-        <AuthContext.Provider value={{ user, login, logout }}>
+        <AuthContext.Provider value={{ user, login, logout, updateUser }}>
             {children}
         </AuthContext.Provider>
     );

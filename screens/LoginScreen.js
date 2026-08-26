@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
-    StyleSheet, Text, View, TextInput, TouchableOpacity,
-    SafeAreaView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
+    ActivityIndicator, KeyboardAvoidingView, Platform,
+    SafeAreaView,
+    StyleSheet, Text,
+    TextInput, TouchableOpacity,
+    View
 } from 'react-native';
-import bcrypt from 'bcryptjs';
-import { supabase } from '../supabase';
-import { useAuth } from '../context/AuthContext';
 import { COLORS } from '../constants/theme';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../supabase';
+import bcrypt from '../utils/bcryptHelper'; // Task 2: ใช้ helper ที่มี fallback
 
 // ─── Guest user ID (predefined record in DB) ─────────────────────────────────
 const GUEST_USER_ID = '00000000-0000-4000-8000-000000000000';
@@ -18,6 +21,9 @@ export default function LoginScreen({ navigation }) {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
 
+    // Task 1: Toggle password visibility
+    const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+
     // ─── Per-field & general error states ───────────────────────────────────
     const [errors, setErrors] = useState({ username: '', password: '', general: '' });
 
@@ -28,7 +34,6 @@ export default function LoginScreen({ navigation }) {
     const handleLogin = async () => {
         clearErrors();
 
-        // Client-side: check empty fields
         let hasError = false;
         if (!username.trim()) {
             setFieldError('username', 'กรุณากรอก Username');
@@ -42,7 +47,6 @@ export default function LoginScreen({ navigation }) {
 
         setLoading(true);
         try {
-            // 1. Query user by username
             const { data: userData, error } = await supabase
                 .from('users')
                 .select('id, name_account, username, password_hash, is_guest')
@@ -51,26 +55,22 @@ export default function LoginScreen({ navigation }) {
 
             if (error) throw new Error(error.message);
 
-            // 2. User not found → show generic message (don't reveal which is wrong)
             if (!userData) {
                 setFieldError('general', 'Username หรือ Password ไม่ถูกต้อง');
                 return;
             }
 
-            // 3. Deny guest accounts from logging in via this form
             if (userData.is_guest) {
                 setFieldError('general', 'Username หรือ Password ไม่ถูกต้อง');
                 return;
             }
 
-            // 4. Verify password
             const isMatch = await bcrypt.compare(password, userData.password_hash);
             if (!isMatch) {
                 setFieldError('general', 'Username หรือ Password ไม่ถูกต้อง');
                 return;
             }
 
-            // 5. Set global auth state (id, name_account, username ready for Profile feature)
             login({
                 id: userData.id,
                 name_account: userData.name_account,
@@ -78,7 +78,6 @@ export default function LoginScreen({ navigation }) {
                 is_guest: false,
             });
 
-            // 6. Go to Home (DrawerRoot ครอบ Home อยู่)
             navigation.replace('DrawerRoot');
 
         } catch (err) {
@@ -146,16 +145,25 @@ export default function LoginScreen({ navigation }) {
                         />
                         {errors.username ? <Text style={styles.errorText}>⚠️ {errors.username}</Text> : null}
 
-                        {/* ── Password ── */}
+                        {/* ── Password (Task 1: toggle visibility) ── */}
                         <Text style={styles.label}>Password</Text>
-                        <TextInput
-                            style={[styles.input, errors.password ? styles.inputError : null]}
-                            placeholder="กรอก Password"
-                            placeholderTextColor="#aaa"
-                            value={password}
-                            onChangeText={v => { setPassword(v); setFieldError('password', ''); }}
-                            secureTextEntry
-                        />
+                        <View style={[styles.inputRow, errors.password ? styles.inputError : null]}>
+                            <TextInput
+                                style={styles.inputInner}
+                                placeholder="กรอก Password"
+                                placeholderTextColor="#aaa"
+                                value={password}
+                                onChangeText={v => { setPassword(v); setFieldError('password', ''); }}
+                                secureTextEntry={!isPasswordVisible}
+                                autoCapitalize="none"
+                            />
+                            <TouchableOpacity
+                                onPress={() => setIsPasswordVisible(v => !v)}
+                                style={styles.eyeBtn}
+                            >
+                                <Text style={styles.eyeIcon}>{isPasswordVisible ? '🙈' : '👁️'}</Text>
+                            </TouchableOpacity>
+                        </View>
                         {errors.password ? <Text style={styles.errorText}>⚠️ {errors.password}</Text> : null}
 
                         {/* ── General Error Banner ── */}
@@ -225,6 +233,18 @@ const styles = StyleSheet.create({
         paddingHorizontal: 14, paddingVertical: 11, fontSize: 15,
         color: COLORS.textDark, backgroundColor: '#FAFAFA',
     },
+    // Task 1: Row สำหรับ input + eye icon
+    inputRow: {
+        flexDirection: 'row', alignItems: 'center',
+        borderWidth: 1.5, borderColor: '#ddd', borderRadius: 12,
+        backgroundColor: '#FAFAFA', paddingRight: 8,
+    },
+    inputInner: {
+        flex: 1, paddingHorizontal: 14, paddingVertical: 11,
+        fontSize: 15, color: COLORS.textDark,
+    },
+    eyeBtn: { padding: 6 },
+    eyeIcon: { fontSize: 18 },
     inputError: { borderColor: '#E74C3C', backgroundColor: '#FFF5F5' },
     errorText: { color: '#E74C3C', fontSize: 12, marginTop: 5, marginLeft: 4, fontWeight: '500' },
     generalErrorBox: {

@@ -1,7 +1,12 @@
-import { useEffect, useState } from 'react';
-import { Alert, Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert, Image, SafeAreaView, ScrollView, StyleSheet, Text,
+  TextInput,
+  TouchableOpacity, View,
+} from 'react-native';
 import { COLORS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabase';
@@ -9,33 +14,34 @@ import { supabase } from '../supabase';
 const AVATAR_CACHE_KEY = 'avatar_url_';
 
 export default function SettingsScreen({ navigation }) {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const [avatar, setAvatar] = useState(null);
   const [uploading, setUploading] = useState(false);
+
+  // Task 5: Editable display name
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [savingName, setSavingName] = useState(false);
 
   // โหลด URL รูปจาก Supabase Storage (หรือ cache)
   useEffect(() => {
     if (!user) return;
-    // โหลดจาก cache ก่อน (เร็ว)
     AsyncStorage.getItem(AVATAR_CACHE_KEY + user.id).then(cachedUrl => {
       if (cachedUrl) setAvatar(cachedUrl);
     });
-    // แล้วค่อย check จาก Supabase Storage จริง
     const path = `${user.id}/avatar.jpg`;
     const { data } = supabase.storage.from('avatars').getPublicUrl(path);
     if (data?.publicUrl) {
-      // เพิ่ม timestamp เพื่อ bust cache กรณีอัปเดตรูปใหม่
       const url = data.publicUrl + '?t=' + user.id.slice(0, 8);
       setAvatar(url);
     }
   }, [user]);
 
-  // อัปโหลดรูปไป Supabase Storage
+  // อัปโหลดรูปโปรไฟล์ไป Supabase Storage + อัปเดต profile_image_url ใน DB
   const uploadToSupabase = async (uri) => {
     setUploading(true);
     try {
       const path = `${user.id}/avatar.jpg`;
-      // แปลง uri เป็น blob
       const response = await fetch(uri);
       const blob = await response.blob();
 
@@ -45,12 +51,14 @@ export default function SettingsScreen({ navigation }) {
 
       if (error) throw error;
 
-      // ดึง public URL หลัง upload สำเร็จ
       const { data } = supabase.storage.from('avatars').getPublicUrl(path);
       const url = data.publicUrl + '?bust=' + Date.now();
       setAvatar(url);
-      // cache ไว้ใน AsyncStorage
       await AsyncStorage.setItem(AVATAR_CACHE_KEY + user.id, url);
+
+      // Task 5: อัปเดต profile_image_url ใน users table
+      await supabase.from('users').update({ profile_image_url: url }).eq('id', user.id);
+
       Alert.alert('✅', 'อัปโหลดรูปสำเร็จ!');
     } catch (err) {
       Alert.alert('Error', err.message);
@@ -86,6 +94,42 @@ export default function SettingsScreen({ navigation }) {
     ]);
   };
 
+  // Task 5: เริ่มแก้ไขชื่อ
+  const startEditName = () => {
+    setEditName(user?.name_account ?? '');
+    setIsEditingName(true);
+  };
+
+  // Task 5: ยกเลิกการแก้ไข → คืนค่าเดิม
+  const cancelEditName = () => {
+    setEditName('');
+    setIsEditingName(false);
+  };
+
+  // Task 5: บันทึกชื่อใหม่ → update DB + AuthContext
+  const saveEditName = async () => {
+    if (!editName.trim()) { Alert.alert('⚠️', 'กรุณากรอกชื่อที่แสดง'); return; }
+    if (editName.trim() === user?.name_account) { setIsEditingName(false); return; }
+
+    setSavingName(true);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ name_account: editName.trim() })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      // อัปเดต global state โดยไม่ต้อง re-login
+      updateUser({ name_account: editName.trim() });
+      setIsEditingName(false);
+      Alert.alert('✅', 'เปลี่ยนชื่อสำเร็จ!');
+    } catch (err) {
+      Alert.alert('Error', err.message);
+    } finally {
+      setSavingName(false);
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert('ออกจากระบบ', 'คุณต้องการออกจากระบบหรือไม่?', [
@@ -95,13 +139,10 @@ export default function SettingsScreen({ navigation }) {
         style: 'destructive',
         onPress: () => {
           logout();
-          // Settings → Drawer → Stack (root)
-          // ต้อง getParent() 2 ครั้งถึงจะถึง Stack ระดับบนสุด
           const stackNav = navigation.getParent()?.getParent();
           if (stackNav) {
             stackNav.reset({ index: 0, routes: [{ name: 'Login' }] });
           } else {
-            // fallback กรณี navigation structure เปลี่ยน
             navigation.navigate('Login');
           }
         },
@@ -143,14 +184,55 @@ export default function SettingsScreen({ navigation }) {
 
         {/* ข้อมูล account */}
         <View style={styles.infoCard}>
+
+          {/* Task 5: ชื่อที่แสดง — แก้ไขได้ */}
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>ชื่อที่แสดง</Text>
-            <Text style={styles.infoValue}>{user?.name_account ?? '-'}</Text>
+            {isEditingName ? (
+              <View style={styles.editNameRow}>
+                <TextInput
+                  style={styles.nameInput}
+                  value={editName}
+                  onChangeText={setEditName}
+                  autoFocus
+                  maxLength={40}
+                />
+                {savingName ? (
+                  <ActivityIndicator size="small" color={COLORS.primary} style={{ marginLeft: 8 }} />
+                ) : (
+                  <>
+                    <TouchableOpacity onPress={saveEditName} style={styles.iconBtn}>
+                      <Text style={styles.saveIcon}>✅</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={cancelEditName} style={styles.iconBtn}>
+                      <Text style={styles.cancelIcon}>❌</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+            ) : (
+              <View style={styles.nameReadRow}>
+                <Text style={styles.infoValue}>{user?.name_account ?? '-'}</Text>
+                {!user?.is_guest && (
+                  <TouchableOpacity onPress={startEditName} style={styles.iconBtn}>
+                    <Text style={styles.pencilIcon}>✏️</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
           </View>
+
           <View style={styles.divider} />
+
+          {/* Task 5: Username — Read-Only */}
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Username</Text>
-            <Text style={styles.infoValue}>@{user?.username ?? '-'}</Text>
+            <View style={styles.nameReadRow}>
+              <Text style={[styles.infoValue, styles.readOnlyValue]}>@{user?.username ?? '-'}</Text>
+              <View style={styles.lockBadge}>
+                <Text style={styles.lockText}>🔒</Text>
+              </View>
+            </View>
           </View>
         </View>
 
@@ -195,10 +277,24 @@ const styles = StyleSheet.create({
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12 },
   infoLabel: { fontSize: 14, fontWeight: '600', color: '#666' },
   infoValue: { fontSize: 15, fontWeight: '700', color: COLORS.textDark },
+  // Task 5: Read-only styling
+  readOnlyValue: { color: '#999' },
   divider: { height: 1, backgroundColor: '#F0F0F0' },
+  // Task 5: Editable name row
+  nameReadRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  editNameRow: { flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end', gap: 4 },
+  nameInput: {
+    borderWidth: 1.5, borderColor: COLORS.primary, borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 5, fontSize: 14,
+    color: COLORS.textDark, minWidth: 100, maxWidth: 150, backgroundColor: '#FAFAFA',
+  },
+  iconBtn: { padding: 4 },
+  pencilIcon: { fontSize: 16 },
+  saveIcon: { fontSize: 18 },
+  cancelIcon: { fontSize: 16 },
+  lockBadge: { paddingHorizontal: 6, paddingVertical: 2 },
+  lockText: { fontSize: 14 },
   // Logout
   logoutBtn: { width: '100%', backgroundColor: '#FFF0F0', padding: 16, borderRadius: 14, alignItems: 'center' },
   logoutBtnText: { color: '#E74C3C', fontSize: 16, fontWeight: 'bold' },
 });
-
-
