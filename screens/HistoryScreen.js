@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, Text, View, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { COLORS } from '../constants/theme';
 import { supabase } from '../supabase';
@@ -25,15 +25,12 @@ export default function HistoryScreen({ navigation }) {
     return unsubscribe;
   }, [navigation, loadHistory]);
 
-  const clearHistory = async () => {
-    Alert.alert('ล้างประวัติ', 'ต้องการล้างประวัติทั้งหมดหรือไม่?', [
+  const clearHistory = () => {
+    Alert.alert('ล้างประวัติ', 'ต้องการซ่อนประวัติทั้งหมดออกจากหน้าจอหรือไม่?\n(ข้อมูลยังคงอยู่ในระบบ)', [
       { text: 'ยกเลิก', style: 'cancel' },
       {
-        text: 'ล้าง', style: 'destructive', onPress: async () => {
-          const { error } = await supabase.from('history').delete().eq('user_id', user.id);
-          if (!error) setHistoryList([]);
-          else Alert.alert('Error', error.message);
-        }
+        text: 'ล้าง', style: 'destructive',
+        onPress: () => setHistoryList([]),
       }
     ]);
   };
