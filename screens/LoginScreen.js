@@ -78,7 +78,7 @@ export default function LoginScreen({ navigation }) {
                 is_guest: false,
             });
 
-            navigation.replace('DrawerRoot');
+            navigation.replace('MainTabs');
 
         } catch (err) {
             setFieldError('general', `เกิดข้อผิดพลาด: ${err.message}`);
@@ -108,7 +108,7 @@ export default function LoginScreen({ navigation }) {
                 is_guest: true,
             });
 
-            navigation.replace('DrawerRoot');
+            navigation.replace('MainTabs');
 
         } catch (err) {
             setFieldError('general', `เกิดข้อผิดพลาด: ${err.message}`);
