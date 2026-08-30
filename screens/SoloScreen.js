@@ -245,9 +245,7 @@ export default function SoloScreen() {
                 <>
                   {currentFood.image_url ? (
                     <Image source={{ uri: currentFood.image_url }} style={styles.foodImage} />
-                  ) : (
-                    <Text style={styles.emoji}>{currentFood.emoji || '🍽️'}</Text>
-                  )}
+                  ) : null}
                   <Text style={styles.foodName}>{currentFood.name}</Text>
                   <View style={styles.tagContainer}>
                     <Text style={styles.tag}>{currentFood.category}</Text>
@@ -429,7 +427,8 @@ const styles = StyleSheet.create({
   },
   // รูปภาพในการ์ดอาหาร
   foodImage: { width: 120, height: 120, borderRadius: 16, marginBottom: 15 },
-  emoji: { fontSize: 80, marginBottom: 15 },
+  noImagePlaceholder: { backgroundColor: '#F0F0F0', justifyContent: 'center', alignItems: 'center' },
+  noImageText: { color: '#999', fontSize: 13, fontWeight: '600' },
   foodName: { fontSize: 24, fontWeight: 'bold', color: COLORS.textDark, marginBottom: 12, textAlign: 'center' },
   tagContainer: { flexDirection: 'row', gap: 10 },
   tag: { backgroundColor: COLORS.accent, color: COLORS.white, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, fontSize: 13, fontWeight: 'bold', overflow: 'hidden' },

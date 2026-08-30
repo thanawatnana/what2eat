@@ -48,7 +48,7 @@ export default function HistoryScreen({ navigation }) {
         {item.image_url ? (
           <Image source={{ uri: item.image_url }} style={styles.cardImage} />
         ) : (
-          <Text style={styles.cardEmoji}>{item.emoji || '🍽️'}</Text>
+          <View style={{ width: 50, height: 50, marginRight: 15 }} />
         )}
         <View style={styles.cardInfo}>
           <Text style={styles.resultName}>{item.food_name}</Text>
@@ -94,8 +94,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white, flexDirection: 'row', padding: 15, borderRadius: 15, marginBottom: 15, alignItems: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3, elevation: 2,
   },
-  cardEmoji: { fontSize: 40, marginRight: 15 },
   cardImage: { width: 50, height: 50, borderRadius: 10, marginRight: 15 },
+  noImagePlaceholder: { backgroundColor: '#F0F0F0', justifyContent: 'center', alignItems: 'center' },
+  noImageText: { color: '#999', fontSize: 10, fontWeight: 'bold' },
   cardInfo: { flex: 1 },
   resultName: { fontSize: 17, fontWeight: 'bold', color: COLORS.textDark, marginBottom: 4 },
   funcName: { fontSize: 13, color: COLORS.primary, fontWeight: '600' },

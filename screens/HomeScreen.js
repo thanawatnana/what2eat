@@ -181,9 +181,7 @@ export default function HomeScreen({ navigation }) {
                 <>
                   {pickedFood.image_url ? (
                     <Image source={{ uri: pickedFood.image_url }} style={styles.foodImage} />
-                  ) : (
-                    <Text style={styles.cardEmoji}>{pickedFood.emoji || '🍽️'}</Text>
-                  )}
+                  ) : null}
                   <Text style={[styles.cardFoodName, pickedFood.image_url && { marginTop: 10 }]}>{pickedFood.name}</Text>
                   <View style={styles.cardBadge}>
                     <Text style={styles.cardBadgeText}>{pickedFood.category}</Text>
@@ -294,7 +292,8 @@ const styles = StyleSheet.create({
   cardBack: { backgroundColor: COLORS.white, padding: 20 },
   cardQuestion: { fontSize: 80, fontWeight: '900', color: '#FFF', textShadowColor: 'rgba(0,0,0,0.2)', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 4 },
   cardHint: { fontSize: 14, color: '#FFF', marginTop: 10, fontWeight: '600' },
-  cardEmoji: { fontSize: 70, marginBottom: 12 },
+  noImagePlaceholder: { backgroundColor: '#F0F0F0', justifyContent: 'center', alignItems: 'center' },
+  noImageText: { color: '#999', fontSize: 13, fontWeight: '600' },
   foodImage: { width: 90, height: 90, borderRadius: 16, marginBottom: 10 },
   cardFoodName: { fontSize: 20, fontWeight: '900', color: '#2C3E50', textAlign: 'center', marginBottom: 8 },
   cardBadge: { backgroundColor: '#FFF5EE', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, marginBottom: 8 },
