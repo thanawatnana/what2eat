@@ -91,9 +91,7 @@ export default function HomeScreen({ navigation }) {
     const { error } = await supabase.from('favorites').insert({
       user_id: user.id,
       food_name: pickedFood.name,
-      food_category: pickedFood.category,
-      image_url: pickedFood.image_url,
-      emoji: pickedFood.emoji
+      food_category: pickedFood.category
     });
     if (error) {
       if (error.code === '23505') Alert.alert('❤️', 'มีเมนูนี้ในรายการโปรดแล้วจ้า!');
