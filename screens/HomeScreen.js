@@ -35,12 +35,24 @@ export default function HomeScreen({ navigation }) {
   const [isFlipping, setIsFlipping] = useState(false);
   const flipAnim = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => { loadFoods(); }, []);
+  const [favFoods, setFavFoods] = useState([]);
 
   const loadFoods = async () => {
     const { data } = await supabase.from('foods').select('*');
     if (data) setFoods(data);
   };
+
+  const loadFavorites = async () => {
+    if (!user) return;
+    const { data } = await supabase.from('favorites').select('food_name').eq('user_id', user.id);
+    if (data) setFavFoods(data.map(f => f.food_name));
+  };
+
+  useEffect(() => { 
+    loadFoods();
+    const unsubscribe = navigation.addListener('focus', loadFavorites);
+    return unsubscribe;
+  }, [navigation, user]);
 
   const getGreeting = () => {
     const h = new Date().getHours();
@@ -98,6 +110,7 @@ export default function HomeScreen({ navigation }) {
       else Alert.alert('Error', error.message);
     } else {
       Alert.alert('❤️', 'บันทึกเมนูโปรดสำเร็จ!');
+      setFavFoods(prev => [...prev, pickedFood.name]);
     }
   };
   // Interpolations สำหรับหน้าหน้า/หน้าหลังการ์ด
@@ -186,9 +199,20 @@ export default function HomeScreen({ navigation }) {
                   </View>
                   <Text style={styles.cardPrice}>฿{pickedFood.price}</Text>
                   
-                  <TouchableOpacity style={styles.favBtn} onPress={saveToFavorites} disabled={isFlipping}>
-                    <Text style={styles.favBtnText}>❤️ บันทึกโปรด</Text>
-                  </TouchableOpacity>
+                  {(() => {
+                    const isFav = favFoods.includes(pickedFood.name);
+                    return (
+                      <TouchableOpacity 
+                        style={[styles.favBtn, isFav && { backgroundColor: '#F0F0F0', borderColor: '#CCC' }]} 
+                        onPress={saveToFavorites} 
+                        disabled={isFlipping || isFav}
+                      >
+                        <Text style={[styles.favBtnText, isFav && { color: '#999' }]}>
+                          {isFav ? '❤️ บันทึกแล้ว' : '❤️ บันทึกโปรด'}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })()}
                 </>
               )}
             </Animated.View>

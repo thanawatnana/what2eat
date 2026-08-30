@@ -19,7 +19,7 @@ import { supabase } from '../supabase';
 // Task 3: หมวดหมู่อาหารสำเร็จรูป (ตัวเลือก dropdown)
 const CATEGORIES = ['Thai', 'Japanese', 'Western', 'Healthy', 'Fast Food', 'Party', 'อื่นๆ'];
 
-export default function SoloScreen() {
+export default function SoloScreen({ navigation }) {
   const { user } = useAuth();
 
   // ── State หลัก ──────────────────────────────────────────────────────────
@@ -61,7 +61,20 @@ export default function SoloScreen() {
     }
   }, [user?.id]);
 
-  useEffect(() => { loadFoods(); }, [loadFoods]);
+  const [favFoods, setFavFoods] = useState([]);
+
+  const loadFavorites = useCallback(async () => {
+    if (!user?.id) return;
+    const { data } = await supabase.from('favorites').select('food_name').eq('user_id', user.id);
+    if (data) setFavFoods(data.map(f => f.food_name));
+  }, [user?.id]);
+
+  useEffect(() => { 
+    loadFoods(); 
+    const unsubscribe = navigation?.addListener ? navigation.addListener('focus', loadFavorites) : null;
+    loadFavorites();
+    return () => { if (unsubscribe) unsubscribe(); };
+  }, [loadFoods, loadFavorites, navigation]);
 
   // Task 6: Guard หลัง hooks ทุกตัว — ป้องกัน crash ตอน logout
   if (!user) return null;
@@ -124,6 +137,7 @@ export default function SoloScreen() {
       else Alert.alert('Error', error.message);
     } else {
       Alert.alert('❤️', 'บันทึกเมนูโปรดสำเร็จ!');
+      setFavFoods(prev => [...prev, currentFood.name]);
     }
   };
 
@@ -254,9 +268,20 @@ export default function SoloScreen() {
                   {currentFood.source === 'custom' && (
                     <Text style={styles.customBadge}>⭐ เมนูของคุณ</Text>
                   )}
-                  <TouchableOpacity style={styles.favBtn} onPress={saveToFavorites} disabled={isFlipping}>
-                    <Text style={styles.favBtnText}>❤️ บันทึกเมนูโปรด</Text>
-                  </TouchableOpacity>
+                  {(() => {
+                    const isFav = favFoods.includes(currentFood.name);
+                    return (
+                      <TouchableOpacity 
+                        style={[styles.favBtn, isFav && { backgroundColor: '#F0F0F0', borderColor: '#CCC' }]} 
+                        onPress={saveToFavorites} 
+                        disabled={isFlipping || isFav}
+                      >
+                        <Text style={[styles.favBtnText, isFav && { color: '#999' }]}>
+                          {isFav ? '❤️ บันทึกแล้ว' : '❤️ บันทึกเมนูโปรด'}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })()}
                 </>
               )}
             </Animated.View>
