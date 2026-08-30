@@ -78,7 +78,7 @@ export default function SearchScreen({ navigation }) {
           keyExtractor={item => item.src + item.id}
           renderItem={({ item }) => <Item item={item} />}
           contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 24 }}
-          ListHeaderComponent={searched && results.length > 0 ? <Text style={styles.count}>📋 x0e1ex0e1ax {results.length} เมนู</Text> : null}
+          ListHeaderComponent={searched && results.length > 0 ? <Text style={styles.count}>📋 พบ {results.length} เมนู</Text> : null}
           ListEmptyComponent={searched ? (
             <View style={styles.center}>
               <Text style={{ fontSize: 48 }}>😕</Text>
@@ -87,7 +87,7 @@ export default function SearchScreen({ navigation }) {
           ) : (
             <View style={styles.center}>
               <Text style={{ fontSize: 56 }}>🍽</Text>
-              <Text style={styles.emptyTxt}>x0e1ex0e34x0e21x0e1ex0e4cx0e40x0e1ex0e37x0e48x0e2dx0e04x0e49x0e19x0e2bx0e32เมนู</Text>
+              <Text style={styles.emptyTxt}>พิมพ์ชื่อเมนูเพื่อค้นหา</Text>
             </View>
           )}
         />
