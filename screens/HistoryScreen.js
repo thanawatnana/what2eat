@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { COLORS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabase';
@@ -45,11 +45,14 @@ export default function HistoryScreen({ navigation }) {
     const timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
     return (
       <View style={styles.historyCard}>
-        {/* Fix 3: food_emoji ถูกลบออกจาก DB แล้ว ใช้ emoji เริ่มต้นแทน */}
-        <Text style={styles.cardEmoji}>📅</Text>
+        {item.image_url ? (
+          <Image source={{ uri: item.image_url }} style={styles.cardImage} />
+        ) : (
+          <Text style={styles.cardEmoji}>{item.emoji || '🍽️'}</Text>
+        )}
         <View style={styles.cardInfo}>
           <Text style={styles.resultName}>{item.food_name}</Text>
-          <Text style={styles.funcName}>Mode: {item.mode}</Text>
+          <Text style={styles.funcName}>หมวดหมู่: {item.food_category}</Text>
           <Text style={styles.timeText}>{dateStr} - {timeStr}</Text>
         </View>
       </View>
@@ -92,6 +95,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3, elevation: 2,
   },
   cardEmoji: { fontSize: 40, marginRight: 15 },
+  cardImage: { width: 50, height: 50, borderRadius: 10, marginRight: 15 },
   cardInfo: { flex: 1 },
   resultName: { fontSize: 17, fontWeight: 'bold', color: COLORS.textDark, marginBottom: 4 },
   funcName: { fontSize: 13, color: COLORS.primary, fontWeight: '600' },

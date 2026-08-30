@@ -94,6 +94,8 @@ export default function SoloScreen() {
           food_name: selected.name,
           food_category: selected.category,
           mode: 'solo',
+          image_url: selected.image_url,
+          emoji: selected.emoji
         });
       } else {
         // ถ้าพลิกกลับไปหน้าคำถาม ให้ clear ผล

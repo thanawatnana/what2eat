@@ -53,9 +53,10 @@ export default function HomeScreen({ navigation }) {
     if (isFlipping || foods.length === 0) return;
     setIsFlipping(true);
 
+    let picked = pickedFood;
     if (!isFlipped) {
       // สุ่มอาหารก่อนพลิก
-      const picked = foods[Math.floor(Math.random() * foods.length)];
+      picked = foods[Math.floor(Math.random() * foods.length)];
       setPickedFood(picked);
     }
 
@@ -64,14 +65,43 @@ export default function HomeScreen({ navigation }) {
       toValue: isFlipped ? 0 : 180,
       duration: 500,
       useNativeDriver: true,
-    }).start(() => {
+    }).start(async () => {
       setIsFlipped(prev => !prev);
       setIsFlipping(false);
+
+      if (!isFlipped && picked && user) {
+        // บันทึกลง history
+        await supabase.from('history').insert({
+          user_id: user.id,
+          food_name: picked.name,
+          food_category: picked.category,
+          mode: 'solo',
+          image_url: picked.image_url,
+          emoji: picked.emoji
+        });
+      }
+
       // ถ้าพลิกกลับแล้ว clear ผล เพื่อสุ่มใหม่ได้
       if (isFlipped) setPickedFood(null);
     });
   };
 
+  const saveToFavorites = async () => {
+    if (!pickedFood || !user) return;
+    const { error } = await supabase.from('favorites').insert({
+      user_id: user.id,
+      food_name: pickedFood.name,
+      food_category: pickedFood.category,
+      image_url: pickedFood.image_url,
+      emoji: pickedFood.emoji
+    });
+    if (error) {
+      if (error.code === '23505') Alert.alert('❤️', 'มีเมนูนี้ในรายการโปรดแล้วจ้า!');
+      else Alert.alert('Error', error.message);
+    } else {
+      Alert.alert('❤️', 'บันทึกเมนูโปรดสำเร็จ!');
+    }
+  };
   // Interpolations สำหรับหน้าหน้า/หน้าหลังการ์ด
   const frontRotate = flipAnim.interpolate({ inputRange: [0, 180], outputRange: ['0deg', '180deg'] });
   const backRotate  = flipAnim.interpolate({ inputRange: [0, 180], outputRange: ['180deg', '360deg'] });
@@ -149,12 +179,20 @@ export default function HomeScreen({ navigation }) {
             ]}>
               {pickedFood && (
                 <>
-                  <Text style={styles.cardEmoji}>{pickedFood.emoji}</Text>
-                  <Text style={styles.cardFoodName}>{pickedFood.name}</Text>
+                  {pickedFood.image_url ? (
+                    <Image source={{ uri: pickedFood.image_url }} style={styles.foodImage} />
+                  ) : (
+                    <Text style={styles.cardEmoji}>{pickedFood.emoji || '🍽️'}</Text>
+                  )}
+                  <Text style={[styles.cardFoodName, pickedFood.image_url && { marginTop: 10 }]}>{pickedFood.name}</Text>
                   <View style={styles.cardBadge}>
                     <Text style={styles.cardBadgeText}>{pickedFood.category}</Text>
                   </View>
                   <Text style={styles.cardPrice}>฿{pickedFood.price}</Text>
+                  
+                  <TouchableOpacity style={styles.favBtn} onPress={saveToFavorites} disabled={isFlipping}>
+                    <Text style={styles.favBtnText}>❤️ บันทึกโปรด</Text>
+                  </TouchableOpacity>
                 </>
               )}
             </Animated.View>
@@ -257,10 +295,13 @@ const styles = StyleSheet.create({
   cardQuestion: { fontSize: 80, fontWeight: '900', color: '#FFF', textShadowColor: 'rgba(0,0,0,0.2)', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 4 },
   cardHint: { fontSize: 14, color: '#FFF', marginTop: 10, fontWeight: '600' },
   cardEmoji: { fontSize: 70, marginBottom: 12 },
+  foodImage: { width: 90, height: 90, borderRadius: 16, marginBottom: 10 },
   cardFoodName: { fontSize: 20, fontWeight: '900', color: '#2C3E50', textAlign: 'center', marginBottom: 8 },
   cardBadge: { backgroundColor: '#FFF5EE', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, marginBottom: 8 },
   cardBadgeText: { fontSize: 11, color: '#8B2626', fontWeight: '700' },
   cardPrice: { fontSize: 14, color: COLORS.primary, fontWeight: 'bold' },
+  favBtn: { marginTop: 14, backgroundColor: '#FFF5F5', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, borderWidth: 1, borderColor: '#FFD1D1' },
+  favBtnText: { fontSize: 13, color: '#E74C3C', fontWeight: 'bold' },
   flipBtn: { marginTop: 24, backgroundColor: COLORS.primary, paddingVertical: 14, paddingHorizontal: 44, borderRadius: 28, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 6 },
   flipBtnText: { color: '#fff', fontSize: 16, fontWeight: '900' },
   // Party
