@@ -144,15 +144,20 @@ export default function SoloScreen() {
   };
 
   // ── Task 3: อัปโหลดรูปไป Supabase Storage ──────────────────────────
-  // Fix 5: ใช้ arrayBuffer() แทน blob() — blob() มักสร้างไฟล์เปล่าบน React Native โดยไม่มี error
-  const uploadFoodImage = async (uri) => {
-    const path = `user_foods/${user.id}/${Date.now()}.jpg`;
+  const uploadFoodImage = async (uri, category) => {
+    // แก้ไขพาท: จัดเก็บรูปตามโฟลเดอร์หมวดหมู่ -> แยกด้วย user.id
+    const safeCategory = category ? category.replace(/[^a-zA-Z0-9ก-๙]/g, '') : 'Other';
+    const path = `${safeCategory}/${user.id}/${Date.now()}.jpg`;
+    
     const response = await fetch(uri);
     const arrayBuffer = await response.arrayBuffer();
+    
     const { error } = await supabase.storage
       .from('food-images')
       .upload(path, arrayBuffer, { contentType: 'image/jpeg', upsert: true });
+      
     if (error) throw error;
+    
     const { data } = supabase.storage.from('food-images').getPublicUrl(path);
     return data.publicUrl;
   };
@@ -163,16 +168,16 @@ export default function SoloScreen() {
     setSavingFood(true);
 
     try {
-      // อัปโหลดรูปก่อน (ถ้าเลือกไว้)
-      let imageUrl = null;
-      if (newImageUri) {
-        imageUrl = await uploadFoodImage(newImageUri);
-      }
-
       // ถ้าเลือก "อื่นๆ" ให้ใช้ custom text; ถ้าไม่ให้ใช้ค่าจาก dropdown
       const finalCategory = newCategory === 'อื่นๆ'
         ? (newCustomCategory.trim() || 'อื่นๆ')
         : newCategory;
+
+      // อัปโหลดรูปก่อน (ถ้าเลือกไว้) พร้อมระบุหมวดหมู่
+      let imageUrl = null;
+      if (newImageUri) {
+        imageUrl = await uploadFoodImage(newImageUri, finalCategory);
+      }
 
       const { error } = await supabase.from('user_foods').insert({
         user_id: user.id,
