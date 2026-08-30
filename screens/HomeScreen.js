@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView, StyleSheet,
-  SafeAreaView, Animated, Dimensions, StatusBar,
+  SafeAreaView, Animated, Dimensions, StatusBar, Image, Alert
 } from 'react-native';
 import { COLORS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
@@ -230,7 +230,9 @@ export default function HomeScreen({ navigation }) {
             {foods.map((food, idx) => (
               <View key={food.id} style={styles.foodCard}>
                 <View style={[styles.foodCardImg, { backgroundColor: WHEEL_ITEMS[idx % 8].color }]}>
-                  <Text style={{ fontSize: 38 }}>{food.emoji}</Text>
+                  {food.image_url ? (
+                    <Image source={{ uri: food.image_url }} style={{ width: '100%', height: '100%' }} />
+                  ) : null}
                 </View>
                 <Text style={styles.foodCardName} numberOfLines={1}>{food.name}</Text>
                 <Text style={styles.foodCardCat}>{food.category}</Text>
