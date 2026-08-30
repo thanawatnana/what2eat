@@ -1,4 +1,4 @@
-﻿import * as ImagePicker from 'expo-image-picker';
+import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator, Alert,
@@ -24,7 +24,9 @@ export default function SoloScreen() {
   // ── State หลัก ──────────────────────────────────────────────────────────
   const [allFoods, setAllFoods] = useState([]);
   const [currentFood, setCurrentFood] = useState(null);
-  const [isRolling, setIsRolling] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [isFlipping, setIsFlipping] = useState(false);
+  const flipAnim = useRef(new Animated.Value(0)).current;
   const [loadingFoods, setLoadingFoods] = useState(true);
 
   // ── Modal เพิ่มเมนูส่วนตัว (Task 3) ─────────────────────────────────────
@@ -64,22 +66,46 @@ export default function SoloScreen() {
   if (!user) return null;
 
   // ── สุ่มอาหาร + บันทึก history ────────────────────────────────
-  const randomizeFood = async () => {
-    if (allFoods.length === 0) return;
-    setIsRolling(true);
-    setTimeout(async () => {
-      const selected = allFoods[Math.floor(Math.random() * allFoods.length)];
+  const randomizeFood = () => {
+    if (allFoods.length === 0 || isFlipping) return;
+    setIsFlipping(true);
+
+    let selected = currentFood;
+    if (!isFlipped) {
+      // สุ่มอาหารใหม่ก่อนพลิกหน้าการ์ดมาโชว์
+      selected = allFoods[Math.floor(Math.random() * allFoods.length)];
       setCurrentFood(selected);
-      setIsRolling(false);
-      // บันทึกลง history บน Supabase (Fix 3: ไม่บันทึก food_emoji เพราะ column ถูกลบออกจาก DB แล้ว)
-      await supabase.from('history').insert({
-        user_id: user.id,
-        food_name: selected.name,
-        food_category: selected.category,
-        mode: 'solo',
-      });
-    }, 600);
+    }
+
+    // แอนิเมชันพลิก 0 -> 180 หรือ 180 -> 0
+    Animated.timing(flipAnim, {
+      toValue: isFlipped ? 0 : 180,
+      duration: 500,
+      useNativeDriver: true,
+    }).start(async () => {
+      setIsFlipped(prev => !prev);
+      setIsFlipping(false);
+      
+      // ถ้าเป็นการพลิกมาโชว์อาหาร ให้บันทึกประวัติ
+      if (!isFlipped && selected) {
+        await supabase.from('history').insert({
+          user_id: user.id,
+          food_name: selected.name,
+          food_category: selected.category,
+          mode: 'solo',
+        });
+      } else {
+        // ถ้าพลิกกลับไปหน้าคำถาม ให้ clear ผล
+        setCurrentFood(null);
+      }
+    });
   };
+
+  // Interpolations สำหรับหน้าการ์ด
+  const frontRotate = flipAnim.interpolate({ inputRange: [0, 180], outputRange: ['0deg', '180deg'] });
+  const backRotate  = flipAnim.interpolate({ inputRange: [0, 180], outputRange: ['180deg', '360deg'] });
+  const frontOpacity = flipAnim.interpolate({ inputRange: [89, 90], outputRange: [1, 0] });
+  const backOpacity  = flipAnim.interpolate({ inputRange: [89, 90], outputRange: [0, 1] });
 
   // ── บันทึก Favorite ───────────────────────────────────────────
   const saveToFavorites = async () => {
@@ -180,41 +206,66 @@ export default function SoloScreen() {
   // ── UI ────────────────────────────────────────────────────────────────────
   return (
     <View style={styles.container}>
-      {/* Food Card */}
-      <View style={styles.card}>
-        {loadingFoods || isRolling ? (
-          <ActivityIndicator size="large" color={COLORS.primary} />
-        ) : currentFood ? (
-          <>
-            {/* Task 3: แสดงรูปถ้ามี image_url ไม่งั้นใช้ emoji */}
-            {currentFood.image_url ? (
-              <Image source={{ uri: currentFood.image_url }} style={styles.foodImage} />
-            ) : (
-              <Text style={styles.emoji}>{currentFood.emoji || '🍽️'}</Text>
-            )}
-            <Text style={styles.foodName}>{currentFood.name}</Text>
-            <View style={styles.tagContainer}>
-              <Text style={styles.tag}>{currentFood.category}</Text>
-              <Text style={styles.priceTag}>฿ {currentFood.price}</Text>
-            </View>
-            {currentFood.source === 'custom' && (
-              <Text style={styles.customBadge}>⭐ เมนูของคุณ</Text>
-            )}
-            <TouchableOpacity style={styles.favBtn} onPress={saveToFavorites}>
-              <Text style={styles.favBtnText}>❤️ บันทึกเมนูโปรด</Text>
-            </TouchableOpacity>
-          </>
+      {/* ── Mystery Card Flip ── */}
+      <View style={styles.cardSection}>
+        {loadingFoods ? (
+          <View style={[styles.card, { justifyContent: 'center' }]}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+          </View>
         ) : (
-          <Text style={styles.emptyText}>
-            {allFoods.length === 0 ? 'ไม่มีเมนูในระบบ' : 'กดปุ่มด้านล่างเพื่อเริ่มสุ่มเมนู!'}
-          </Text>
+          <TouchableOpacity 
+            onPress={randomizeFood} 
+            activeOpacity={0.9} 
+            disabled={isFlipping || allFoods.length === 0} 
+            style={styles.cardTouchable}
+          >
+            {/* ── หน้าการ์ด (?) ── */}
+            <Animated.View style={[
+              styles.card, styles.cardFront,
+              { transform: [{ rotateY: frontRotate }], opacity: frontOpacity },
+            ]}>
+              <Text style={styles.cardQuestion}>?</Text>
+              <Text style={styles.cardHint}>แตะการ์ดเพื่อเปิดเผย</Text>
+            </Animated.View>
+
+            {/* ── หลังการ์ด (ผลลัพธ์อาหาร) ── */}
+            <Animated.View style={[
+              styles.card, styles.cardBack,
+              { transform: [{ rotateY: backRotate }], opacity: backOpacity },
+            ]}>
+              {currentFood && (
+                <>
+                  {currentFood.image_url ? (
+                    <Image source={{ uri: currentFood.image_url }} style={styles.foodImage} />
+                  ) : (
+                    <Text style={styles.emoji}>{currentFood.emoji || '🍽️'}</Text>
+                  )}
+                  <Text style={styles.foodName}>{currentFood.name}</Text>
+                  <View style={styles.tagContainer}>
+                    <Text style={styles.tag}>{currentFood.category}</Text>
+                    <Text style={styles.priceTag}>฿ {currentFood.price}</Text>
+                  </View>
+                  {currentFood.source === 'custom' && (
+                    <Text style={styles.customBadge}>⭐ เมนูของคุณ</Text>
+                  )}
+                  <TouchableOpacity style={styles.favBtn} onPress={saveToFavorites} disabled={isFlipping}>
+                    <Text style={styles.favBtnText}>❤️ บันทึกเมนูโปรด</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </Animated.View>
+          </TouchableOpacity>
         )}
       </View>
 
       {/* ปุ่มหลัก */}
-      <TouchableOpacity style={styles.randomButton} onPress={randomizeFood} disabled={isRolling || loadingFoods}>
+      <TouchableOpacity 
+        style={[styles.randomButton, (isFlipping || allFoods.length === 0) && { opacity: 0.6 }]} 
+        onPress={randomizeFood} 
+        disabled={isFlipping || allFoods.length === 0}
+      >
         <Text style={styles.randomButtonText}>
-          {currentFood ? '🔄 สุ่มใหม่อีกครั้ง' : '🎲 เริ่มสุ่มเมนู'}
+          {isFlipping ? '✨ กำลังเปิดเผย...' : isFlipped ? '🔄 สุ่มใหม่อีกครั้ง' : '🎲 เริ่มสุ่มเมนู'}
         </Text>
       </TouchableOpacity>
 
@@ -325,10 +376,48 @@ export default function SoloScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, alignItems: 'center', backgroundColor: COLORS.background },
+  cardSection: {
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 40,
+    marginBottom: 30,
+    height: 320,
+    justifyContent: 'center',
+  },
+  cardTouchable: {
+    width: '85%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   card: {
-    backgroundColor: COLORS.white, width: '85%', padding: 30, borderRadius: 24, alignItems: 'center',
+    backgroundColor: COLORS.white, width: '100%', height: '100%', padding: 20, borderRadius: 24, alignItems: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 8,
-    marginTop: 40, marginBottom: 30, minHeight: 250, justifyContent: 'center',
+    justifyContent: 'center',
+    position: 'absolute',
+    backfaceVisibility: 'hidden',
+  },
+  cardFront: {
+    backgroundColor: COLORS.secondary,
+    borderWidth: 8,
+    borderColor: '#FFF',
+  },
+  cardBack: {
+    backgroundColor: COLORS.white,
+  },
+  cardQuestion: {
+    fontSize: 100,
+    fontWeight: '900',
+    color: '#FFF',
+    textShadowColor: 'rgba(0,0,0,0.2)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
+  },
+  cardHint: {
+    fontSize: 16,
+    color: '#FFF',
+    marginTop: 10,
+    fontWeight: '600',
   },
   // รูปภาพในการ์ดอาหาร
   foodImage: { width: 120, height: 120, borderRadius: 16, marginBottom: 15 },
