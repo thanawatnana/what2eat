@@ -3,6 +3,7 @@ import {
     StyleSheet, Text, View, FlatList, TouchableOpacity,
     SafeAreaView, ActivityIndicator, Alert, Share
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { COLORS } from '../constants/theme';
 import { supabase } from '../supabase';
 
@@ -75,9 +76,15 @@ export default function LobbyScreen({ route, navigation }) {
         // การ navigate จะเกิดจาก Realtime listener ด้านบน (ทั้ง host และ guest)
     };
 
+    // Bug 3 fix: Copy room code ที่ถูกต้องลง clipboard
+    const handleCopyCode = async () => {
+        await Clipboard.setStringAsync(roomCode);
+        Alert.alert('📋 คัดลอกแล้ว!', `รหัสห้อง ${roomCode} ถูกคัดลอกแล้ว`);
+    };
+
     // ── แชร์รหัสห้อง ───────────────────────────────────────────────
     const handleShare = () => {
-        Share.share({ message: `มาเล่น What2Eat กันเถอะ! รหัสห้อง: ${roomCode}` });
+        Share.share({ message: `มาเล่น What2Eat กันเถอะ! 🍴\nรหัสห้อง: ${roomCode}` });
     };
 
     const renderParticipant = ({ item, index }) => (
@@ -97,9 +104,15 @@ export default function LobbyScreen({ route, navigation }) {
             <View style={styles.headerCard}>
                 <Text style={styles.roomLabel}>Room Code</Text>
                 <Text style={styles.roomCode}>{roomCode}</Text>
-                <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
-                    <Text style={styles.shareBtnText}>📤 Share Code</Text>
-                </TouchableOpacity>
+                {/* Bug 3 fix: ปุ่ม Copy + Share */}
+                <View style={styles.codeBtnRow}>
+                    <TouchableOpacity style={styles.copyBtn} onPress={handleCopyCode}>
+                        <Text style={styles.shareBtnText}>📋 Copy</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
+                        <Text style={styles.shareBtnText}>📤 Share</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
 
             {/* รายชื่อผู้เล่น */}
@@ -149,7 +162,10 @@ const styles = StyleSheet.create({
     },
     roomLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: '600', letterSpacing: 1 },
     roomCode: { color: COLORS.white, fontSize: 48, fontWeight: '900', letterSpacing: 8, marginVertical: 5 },
-    shareBtn: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20, marginTop: 5 },
+    // Bug 3 fix: Copy + Share buttons row
+    codeBtnRow: { flexDirection: 'row', gap: 10, marginTop: 8 },
+    copyBtn: { backgroundColor: 'rgba(255,255,255,0.3)', paddingHorizontal: 18, paddingVertical: 8, borderRadius: 20 },
+    shareBtn: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 18, paddingVertical: 8, borderRadius: 20 },
     shareBtnText: { color: COLORS.white, fontWeight: 'bold', fontSize: 13 },
     playersCard: { backgroundColor: COLORS.white, borderRadius: 20, padding: 20, flex: 1, marginBottom: 20 },
     playersHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },

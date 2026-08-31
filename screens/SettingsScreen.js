@@ -26,13 +26,22 @@ export default function SettingsScreen({ navigation }) {
   // โหลด URL รูปจาก Supabase Storage (หรือ cache)
   useEffect(() => {
     if (!user) return;
+
+    // Bug 6 fix: Guest ไม่ควรมี avatar — ลบ cache เก่าออก + force null
+    if (user.is_guest) {
+      setAvatar(null);
+      AsyncStorage.removeItem(AVATAR_CACHE_KEY + user.id).catch(() => {});
+      return;
+    }
+
     AsyncStorage.getItem(AVATAR_CACHE_KEY + user.id).then(cachedUrl => {
       if (cachedUrl) setAvatar(cachedUrl);
     });
     const path = `${user.id}/avatar.jpg`;
     const { data } = supabase.storage.from('avatars').getPublicUrl(path);
     if (data?.publicUrl) {
-      const url = data.publicUrl + '?t=' + user.id.slice(0, 8);
+      // Bug 6 fix: ใช้ timestamp เพื่อ bust cache เสมอ
+      const url = data.publicUrl + '?bust=' + Date.now();
       setAvatar(url);
     }
   }, [user]);
@@ -155,10 +164,19 @@ export default function SettingsScreen({ navigation }) {
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.container}>
 
+        {/* Task 1: Guest Warning Banner */}
+        {user?.is_guest && (
+          <View style={styles.guestWarningBanner}>
+            <Text style={styles.guestWarningIcon}>⚠️</Text>
+            <Text style={styles.guestWarningText}>บัญชี Guest ไม่สามารถแก้ไขข้อมูลโปรไฟล์ได้</Text>
+          </View>
+        )}
+
         {/* รูปโปรไฟล์ */}
         <View style={styles.avatarSection}>
-          <TouchableOpacity onPress={handleChangePhoto} activeOpacity={0.8} disabled={uploading}>
-            <View style={styles.avatarWrapper}>
+          {/* Task 1: ปิด image picker สำหรับ Guest */}
+          <TouchableOpacity onPress={handleChangePhoto} activeOpacity={0.8} disabled={uploading || user?.is_guest}>
+            <View style={[styles.avatarWrapper, user?.is_guest && { opacity: 0.6 }]}>
               {avatar ? (
                 <Image source={{ uri: avatar }} style={styles.avatarImg} />
               ) : (
@@ -166,12 +184,15 @@ export default function SettingsScreen({ navigation }) {
                   <Text style={{ fontSize: 52 }}>👤</Text>
                 </View>
               )}
-              <View style={styles.editBadge}>
-                {uploading
-                  ? <ActivityIndicator size="small" color={COLORS.white} />
-                  : <Text style={styles.editBadgeText}>📷</Text>
-                }
-              </View>
+              {/* Task 1: ซ่อน camera badge สำหรับ Guest */}
+              {!user?.is_guest && (
+                <View style={styles.editBadge}>
+                  {uploading
+                    ? <ActivityIndicator size="small" color={COLORS.white} />
+                    : <Text style={styles.editBadgeText}>📷</Text>
+                  }
+                </View>
+              )}
             </View>
           </TouchableOpacity>
           <Text style={styles.displayName}>{user?.name_account ?? 'Guest'}</Text>
@@ -295,6 +316,13 @@ const styles = StyleSheet.create({
   cancelIcon: { fontSize: 16 },
   lockBadge: { paddingHorizontal: 6, paddingVertical: 2 },
   lockText: { fontSize: 14 },
+  // Task 1: Guest Warning Banner
+  guestWarningBanner: {
+    width: '100%', flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF3CD',
+    borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: '#FFECB5', gap: 10,
+  },
+  guestWarningIcon: { fontSize: 20 },
+  guestWarningText: { flex: 1, fontSize: 13, fontWeight: '700', color: '#856404', lineHeight: 18 },
   // Logout
   logoutBtn: { width: '100%', backgroundColor: '#FFF0F0', padding: 16, borderRadius: 14, alignItems: 'center' },
   logoutBtnText: { color: '#E74C3C', fontSize: 16, fontWeight: 'bold' },

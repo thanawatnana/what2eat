@@ -1,28 +1,27 @@
-import 'react-native-gesture-handler';
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import 'react-native-gesture-handler';
 import { COLORS } from './constants/theme';
 import { AuthProvider } from './context/AuthContext';
 
-import LoginScreen    from './screens/LoginScreen';
-import RegisterScreen from './screens/RegisterScreen';
-import HomeScreen     from './screens/HomeScreen';
-import SearchScreen   from './screens/SearchScreen';
-import SoloScreen     from './screens/SoloScreen';
-import FavScreen      from './screens/FavScreen';
-import SettingsScreen from './screens/SettingsScreen';
-import PartyScreen    from './screens/PartyScreen';
-import LobbyScreen    from './screens/LobbyScreen';
-import SwipeScreen    from './screens/SwipeScreen';
-import ResultScreen   from './screens/ResultScreen';
-import HistoryScreen  from './screens/HistoryScreen';
 import AllFoodsScreen from './screens/AllFoodsScreen';
+import FavScreen from './screens/FavScreen';
+import HistoryScreen from './screens/HistoryScreen';
+import HomeScreen from './screens/HomeScreen';
+import LobbyScreen from './screens/LobbyScreen';
+import LoginScreen from './screens/LoginScreen';
+import PartyScreen from './screens/PartyScreen';
+import RegisterScreen from './screens/RegisterScreen';
+import ResultScreen from './screens/ResultScreen';
+import SearchScreen from './screens/SearchScreen';
+import SettingsScreen from './screens/SettingsScreen';
+import SoloScreen from './screens/SoloScreen';
+import SwipeScreen from './screens/SwipeScreen';
 
 const Stack = createNativeStackNavigator();
-const Tab   = createBottomTabNavigator();
+const Tab = createBottomTabNavigator();
 
 function CenterTabButton({ children, onPress }) {
   return (
@@ -43,6 +42,8 @@ function MainTabs() {
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: '#bbb',
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginBottom: 2 },
+        // Bug 1 fix: prevent tab screens from being detached which causes freeze
+        detachInactiveScreens: false,
       }}
     >
       <Tab.Screen
@@ -98,16 +99,31 @@ export default function App() {
     <AuthProvider>
       <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="Login"     component={LoginScreen} />
-          <Stack.Screen name="Register"  component={RegisterScreen} />
-          <Stack.Screen name="MainTabs"  component={MainTabs} />
-          <Stack.Screen name="Party"     component={PartyScreen}   options={{ headerShown: true, title: '🔥 ปาร์ตี้', headerStyle: { backgroundColor: COLORS.secondary }, headerTintColor: '#fff', headerBackVisible: true }} />
-          <Stack.Screen name="Lobby"     component={LobbyScreen}   options={{ headerShown: true, title: '🏕 ล็อบบี้', headerStyle: { backgroundColor: COLORS.secondary }, headerTintColor: '#fff', headerBackVisible: false }} />
-          <Stack.Screen name="Swipe"     component={SwipeScreen}   options={{ headerShown: true, title: '🗳 โหวต', headerStyle: { backgroundColor: COLORS.secondary }, headerTintColor: '#fff', headerBackVisible: false }} />
-          <Stack.Screen name="Result"    component={ResultScreen}  options={{ headerShown: true, title: '🎉 ผลลัพธ์', headerStyle: { backgroundColor: COLORS.secondary }, headerTintColor: '#fff', headerBackVisible: false }} />
-          <Stack.Screen name="History"   component={HistoryScreen} options={{ headerShown: true, title: 'ประวัติการสุ่ม', headerTintColor: COLORS.secondary }} />
-          <Stack.Screen name="AllFoods"  component={AllFoodsScreen} options={{ headerShown: true, title: 'เมนูอาหารทั้งหมด', headerTintColor: COLORS.secondary }} />
-          <Stack.Screen name="Search"    component={SearchScreen}  options={{ headerShown: false }} />
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="MainTabs" component={MainTabs} />
+          <Stack.Screen
+            name="Party"
+            component={PartyScreen}
+            options={({ navigation }) => ({
+              headerShown: true,
+              title: '🔥 ปาร์ตี้',
+              headerStyle: { backgroundColor: COLORS.secondary },
+              headerTintColor: '#fff',
+              // Bug 2 fix: explicit back button that always works
+              headerLeft: () => (
+                <TouchableOpacity onPress={() => navigation.goBack()} style={{ paddingHorizontal: 10 }}>
+                  <Text style={{ fontSize: 18, color: '#fff' }}>{Platform.OS === 'ios' ? '‹ กลับ' : '← กลับ'}</Text>
+                </TouchableOpacity>
+              ),
+            })}
+          />
+          <Stack.Screen name="Lobby" component={LobbyScreen} options={{ headerShown: true, title: '🏕 ล็อบบี้', headerStyle: { backgroundColor: COLORS.secondary }, headerTintColor: '#fff', headerBackVisible: false }} />
+          <Stack.Screen name="Swipe" component={SwipeScreen} options={{ headerShown: true, title: '🗳 โหวต', headerStyle: { backgroundColor: COLORS.secondary }, headerTintColor: '#fff', headerBackVisible: false }} />
+          <Stack.Screen name="Result" component={ResultScreen} options={{ headerShown: true, title: '🎉 ผลลัพธ์', headerStyle: { backgroundColor: COLORS.secondary }, headerTintColor: '#fff', headerBackVisible: false }} />
+          <Stack.Screen name="History" component={HistoryScreen} options={{ headerShown: true, title: 'ประวัติการสุ่ม', headerTintColor: COLORS.secondary }} />
+          <Stack.Screen name="AllFoods" component={AllFoodsScreen} options={{ headerShown: true, title: 'เมนูอาหารทั้งหมด', headerTintColor: COLORS.secondary }} />
+          <Stack.Screen name="Search" component={SearchScreen} options={{ headerShown: false }} />
         </Stack.Navigator>
       </NavigationContainer>
     </AuthProvider>

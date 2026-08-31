@@ -6,15 +6,27 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform, ScrollView,
+  StatusBar,
   StyleSheet, Text,
   TextInput,
   TouchableOpacity,
   View,
   Animated,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabase';
+
+// Task 4: หมวดหมู่สำหรับ Filter Chips
+const FILTER_CATEGORIES = [
+  { emoji: '🍽️', label: 'ทั้งหมด', value: 'All' },
+  { emoji: '🍜', label: 'อาหารไทย', value: 'Thai' },
+  { emoji: '🍣', label: 'อาหารญี่ปุ่น', value: 'Japanese' },
+  { emoji: '🥗', label: 'สุขภาพ', value: 'Healthy' },
+  { emoji: '🍔', label: 'ฟาสต์ฟู้ด', value: 'Fast Food' },
+  { emoji: '🍲', label: 'ปาร์ตี้', value: 'Party' },
+];
 
 // Task 3: หมวดหมู่อาหารสำเร็จรูป (ตัวเลือก dropdown)
 const CATEGORIES = ['Thai', 'Japanese', 'Western', 'Healthy', 'Fast Food', 'Party', 'อื่นๆ'];
@@ -29,6 +41,9 @@ export default function SoloScreen({ navigation }) {
   const [isFlipping, setIsFlipping] = useState(false);
   const flipAnim = useRef(new Animated.Value(0)).current;
   const [loadingFoods, setLoadingFoods] = useState(true);
+
+  // Bug 4 fix: Multi-select category filter (array instead of single string)
+  const [selectedCategories, setSelectedCategories] = useState([]);
 
   // ── Modal เพิ่มเมนูส่วนตัว (Task 3) ─────────────────────────────────────
   const [modalVisible, setModalVisible] = useState(false);
@@ -80,14 +95,39 @@ export default function SoloScreen({ navigation }) {
   if (!user) return null;
 
   // ── สุ่มอาหาร + บันทึก history ────────────────────────────────
+  // Bug 4 fix: กรองอาหารตาม categories ที่เลือก (multi-select)
+  const getFilteredFoods = () => {
+    if (selectedCategories.length === 0) return allFoods; // ว่าง = ทั้งหมด
+    return allFoods.filter(f => selectedCategories.includes(f.category));
+  };
+
+  // Bug 4 fix: Toggle category in/out of selection array
+  const toggleCategory = (value) => {
+    if (value === 'All') {
+      // กด "ทั้งหมด" → clear selection
+      setSelectedCategories([]);
+    } else {
+      setSelectedCategories(prev =>
+        prev.includes(value)
+          ? prev.filter(c => c !== value)  // remove
+          : [...prev, value]               // add
+      );
+    }
+    // Reset card when changing filter
+    setCurrentFood(null);
+    setIsFlipped(false);
+    flipAnim.setValue(0);
+  };
+
   const randomizeFood = () => {
-    if (allFoods.length === 0 || isFlipping) return;
+    const filteredFoods = getFilteredFoods();
+    if (filteredFoods.length === 0 || isFlipping) return;
     setIsFlipping(true);
 
     let selected = currentFood;
     if (!isFlipped) {
-      // สุ่มอาหารใหม่ก่อนพลิกหน้าการ์ดมาโชว์
-      selected = allFoods[Math.floor(Math.random() * allFoods.length)];
+      // Bug 4: สุ่มจากรายการที่กรองแล้ว (multi-category)
+      selected = filteredFoods[Math.floor(Math.random() * filteredFoods.length)];
       setCurrentFood(selected);
     }
 
@@ -227,7 +267,35 @@ export default function SoloScreen({ navigation }) {
 
   // ── UI ────────────────────────────────────────────────────────────────────
   return (
-    <View style={styles.container}>
+    // Task 2: SafeAreaView เพื่อหลีกเลี่ยง notch/status bar
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+
+      {/* Task 4: Category Filter Chips */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterRow}
+        style={styles.filterScroll}
+      >
+        {FILTER_CATEGORIES.map((cat) => {
+          // Bug 4 fix: multi-select — "All" is active when array is empty
+          const isActive = cat.value === 'All'
+            ? selectedCategories.length === 0
+            : selectedCategories.includes(cat.value);
+          return (
+            <TouchableOpacity
+              key={cat.value}
+              style={[styles.filterChip, isActive && styles.filterChipActive]}
+              onPress={() => toggleCategory(cat.value)}
+              activeOpacity={0.7}
+            >
+              <Text style={{ fontSize: 16 }}>{cat.emoji}</Text>
+              <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>{cat.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
       {/* ── Mystery Card Flip ── */}
       <View style={styles.cardSection}>
         {loadingFoods ? (
@@ -401,16 +469,28 @@ export default function SoloScreen({ navigation }) {
           </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, alignItems: 'center', backgroundColor: COLORS.background },
+  // Task 4: Filter chips styles
+  filterScroll: { flexGrow: 0, marginTop: 12, marginBottom: 4 },
+  filterRow: { paddingHorizontal: 16, gap: 8 },
+  filterChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: '#FFF5EE', borderRadius: 20,
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderWidth: 1.5, borderColor: '#FFD8B4',
+  },
+  filterChipActive: { backgroundColor: COLORS.secondary, borderColor: COLORS.secondary },
+  filterChipText: { fontSize: 12, fontWeight: '700', color: '#8B2626' },
+  filterChipTextActive: { color: '#FFF' },
   cardSection: {
     width: '100%',
     alignItems: 'center',
-    marginTop: 40,
+    marginTop: 20,
     marginBottom: 30,
     height: 320,
     justifyContent: 'center',
@@ -471,7 +551,8 @@ const styles = StyleSheet.create({
   addBtnText: { color: COLORS.secondary, fontSize: 14, fontWeight: '700' },
   // ── Modal ──
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalScroll: { justifyContent: 'flex-end' },
+  // Bug 5 fix: flexGrow ensures modal content stays at the bottom
+  modalScroll: { justifyContent: 'flex-end', flexGrow: 1 },
   modalCard: { backgroundColor: COLORS.white, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, paddingBottom: 40 },
   modalTitle: { fontSize: 20, fontWeight: '900', color: COLORS.secondary, marginBottom: 16, textAlign: 'center' },
   modalLabel: { fontSize: 13, fontWeight: '600', color: '#666', marginBottom: 6, marginTop: 12 },

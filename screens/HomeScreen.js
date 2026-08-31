@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView, StyleSheet,
-  SafeAreaView, Animated, Dimensions, StatusBar, Image, Alert
+  SafeAreaView, Dimensions, StatusBar, Image
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabase';
@@ -27,31 +28,43 @@ const CATEGORIES = [
   { emoji: '🍲', label: 'ปาร์ตี้',  value: 'Party' },
 ];
 
+const AVATAR_CACHE_KEY = 'avatar_url_';
+
 export default function HomeScreen({ navigation }) {
   const { user } = useAuth();
   const [foods, setFoods] = useState([]);
-  const [pickedFood, setPickedFood] = useState(null);
-  const [isFlipped, setIsFlipped] = useState(false);
-  const [isFlipping, setIsFlipping] = useState(false);
-  const flipAnim = useRef(new Animated.Value(0)).current;
 
-  const [favFoods, setFavFoods] = useState([]);
+  // Task 5: Profile avatar state
+  const [avatarUrl, setAvatarUrl] = useState(null);
 
   const loadFoods = async () => {
     const { data } = await supabase.from('foods').select('*');
     if (data) setFoods(data);
   };
 
-  const loadFavorites = async () => {
-    if (!user) return;
-    const { data } = await supabase.from('favorites').select('food_name').eq('user_id', user.id);
-    if (data) setFavFoods(data.map(f => f.food_name));
+  // Task 5: โหลด avatar URL จาก Supabase Storage
+  const loadAvatar = async () => {
+    if (!user || user.is_guest) return;
+    try {
+      // ลองจาก cache ก่อน
+      const cachedUrl = await AsyncStorage.getItem(AVATAR_CACHE_KEY + user.id);
+      if (cachedUrl) setAvatarUrl(cachedUrl);
+
+      // โหลดจาก Supabase
+      const path = `${user.id}/avatar.jpg`;
+      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+      if (data?.publicUrl) {
+        const url = data.publicUrl + '?t=' + user.id.slice(0, 8);
+        setAvatarUrl(url);
+      }
+    } catch (e) {
+      // ignore
+    }
   };
 
   useEffect(() => { 
     loadFoods();
-    const unsubscribe = navigation.addListener('focus', loadFavorites);
-    return unsubscribe;
+    loadAvatar();
   }, [navigation, user]);
 
   const getGreeting = () => {
@@ -60,66 +73,6 @@ export default function HomeScreen({ navigation }) {
     if (h < 17) return 'สวัสดีตอนบ่าย';
     return 'สวัสดีตอนเย็น';
   };
-
-  const handleFlip = () => {
-    if (isFlipping || foods.length === 0) return;
-    setIsFlipping(true);
-
-    let picked = pickedFood;
-    if (!isFlipped) {
-      // สุ่มอาหารก่อนพลิก
-      picked = foods[Math.floor(Math.random() * foods.length)];
-      setPickedFood(picked);
-    }
-
-    // Flip animation: 0 → 180 (พลิกไปหน้าหลัง) หรือ 180 → 0 (พลิกกลับ)
-    Animated.timing(flipAnim, {
-      toValue: isFlipped ? 0 : 180,
-      duration: 500,
-      useNativeDriver: true,
-    }).start(async () => {
-      setIsFlipped(prev => !prev);
-      setIsFlipping(false);
-
-      if (!isFlipped && picked && user) {
-        // บันทึกลง history
-        await supabase.from('history').insert({
-          user_id: user.id,
-          food_name: picked.name,
-          food_category: picked.category,
-          mode: 'solo',
-          image_url: picked.image_url,
-          emoji: picked.emoji
-        });
-      }
-
-      // ถ้าพลิกกลับแล้ว clear ผล เพื่อสุ่มใหม่ได้
-      if (isFlipped) setPickedFood(null);
-    });
-  };
-
-  const saveToFavorites = async () => {
-    if (!pickedFood || !user) return;
-    const { error } = await supabase.from('favorites').insert({
-      user_id: user.id,
-      food_name: pickedFood.name,
-      food_category: pickedFood.category
-    });
-    if (error) {
-      if (error.code === '23505') Alert.alert('❤️', 'มีเมนูนี้ในรายการโปรดแล้วจ้า!');
-      else Alert.alert('Error', error.message);
-    } else {
-      Alert.alert('❤️', 'บันทึกเมนูโปรดสำเร็จ!');
-      setFavFoods(prev => [...prev, pickedFood.name]);
-    }
-  };
-  // Interpolations สำหรับหน้าหน้า/หน้าหลังการ์ด
-  const frontRotate = flipAnim.interpolate({ inputRange: [0, 180], outputRange: ['0deg', '180deg'] });
-  const backRotate  = flipAnim.interpolate({ inputRange: [0, 180], outputRange: ['180deg', '360deg'] });
-  const frontOpacity = flipAnim.interpolate({ inputRange: [89, 90], outputRange: [1, 0] });
-  const backOpacity  = flipAnim.interpolate({ inputRange: [89, 90], outputRange: [0, 1] });
-
-  const cardColor = pickedFood ? WHEEL_ITEMS[foods.indexOf(pickedFood) % 8]?.color ?? COLORS.primary : COLORS.primary;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -136,8 +89,13 @@ export default function HomeScreen({ navigation }) {
             <TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('Search')}>
               <Text style={{ fontSize: 18 }}>🔍</Text>
             </TouchableOpacity>
+            {/* Task 5: แสดง profile picture จริง หรือ fallback */}
             <TouchableOpacity style={styles.avatarBtn} onPress={() => navigation.navigate('AccountTab')}>
-              <Text style={{ fontSize: 22 }}>👤</Text>
+              {avatarUrl && !user?.is_guest ? (
+                <Image source={{ uri: avatarUrl }} style={styles.avatarImg} />
+              ) : (
+                <Text style={{ fontSize: 22 }}>👤</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -165,79 +123,39 @@ export default function HomeScreen({ navigation }) {
           ))}
         </ScrollView>
 
-        {/* ── Mystery Card Flip ── */}
-        <View style={styles.cardSection}>
-          <Text style={styles.cardTitle}>🃏 สุ่มเมนูลับ!</Text>
-          <Text style={styles.cardSubtitle}>
-            {isFlipped ? 'กดพลิกเพื่อสุ่มใหม่' : 'กดการ์ดหรือปุ่มเพื่อสุ่มเมนู'}
-          </Text>
+        {/* ── Task 3: Action Buttons (แทนที่ Card Flip) ── */}
+        <View style={styles.actionSection}>
+          <Text style={styles.actionSectionTitle}>🎯 เลือกโหมด</Text>
+          <Text style={styles.actionSectionSub}>ไม่รู้จะกินอะไร? ให้เราช่วยเลือกให้!</Text>
 
-          {/* Card container */}
-          <TouchableOpacity onPress={handleFlip} activeOpacity={0.9} disabled={isFlipping} style={styles.cardTouchable}>
-            {/* หน้าการ์ด (?) */}
-            <Animated.View style={[
-              styles.card, styles.cardFront,
-              { transform: [{ rotateY: frontRotate }], opacity: frontOpacity },
-            ]}>
-              <Text style={styles.cardQuestion}>?</Text>
-              <Text style={styles.cardHint}>แตะเพื่อเปิดเผย</Text>
-            </Animated.View>
+          <View style={styles.actionBtnRow}>
+            {/* ปุ่มสุ่มอาหาร */}
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => navigation.navigate('SoloTab')}
+              activeOpacity={0.85}
+            >
+              <View style={[styles.actionBtnIcon, { backgroundColor: COLORS.primary }]}>
+                <Text style={{ fontSize: 36 }}>🎲</Text>
+              </View>
+              <Text style={styles.actionBtnTitle}>สุ่มอาหาร</Text>
+              <Text style={styles.actionBtnDesc}>สุ่มเมนูจากเมนูทั้งหมด</Text>
+            </TouchableOpacity>
 
-            {/* หลังการ์ด (อาหาร) */}
-            <Animated.View style={[
-              styles.card, styles.cardBack,
-              { backgroundColor: cardColor, transform: [{ rotateY: backRotate }], opacity: backOpacity },
-            ]}>
-              {pickedFood && (
-                <>
-                  {pickedFood.image_url ? (
-                    <Image source={{ uri: pickedFood.image_url }} style={styles.foodImage} />
-                  ) : null}
-                  <Text style={[styles.cardFoodName, pickedFood.image_url && { marginTop: 10 }]}>{pickedFood.name}</Text>
-                  <View style={styles.cardBadge}>
-                    <Text style={styles.cardBadgeText}>{pickedFood.category}</Text>
-                  </View>
-                  <Text style={styles.cardPrice}>฿{pickedFood.price}</Text>
-                  
-                  {(() => {
-                    const isFav = favFoods.includes(pickedFood.name);
-                    return (
-                      <TouchableOpacity 
-                        style={[styles.favBtn, isFav && { backgroundColor: '#F0F0F0', borderColor: '#CCC' }]} 
-                        onPress={saveToFavorites} 
-                        disabled={isFlipping || isFav}
-                      >
-                        <Text style={[styles.favBtnText, isFav && { color: '#999' }]}>
-                          {isFav ? '❤️ บันทึกแล้ว' : '❤️ บันทึกโปรด'}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })()}
-                </>
-              )}
-            </Animated.View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.flipBtn, (isFlipping || foods.length === 0) && { opacity: 0.6 }]}
-            onPress={handleFlip}
-            disabled={isFlipping || foods.length === 0}
-          >
-            <Text style={styles.flipBtnText}>
-              {isFlipping ? '✨ กำลังเปิดเผย...' : isFlipped ? '🔄 สุ่มใหม่' : '🎲 สุ่มเมนู!'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* ── Party Banner ── */}
-        <TouchableOpacity style={styles.partyBanner} onPress={() => navigation.navigate('Party')} activeOpacity={0.85}>
-          <Text style={{ fontSize: 30 }}>🔥</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.partyBannerTitle}>สุ่มกับเพื่อน!</Text>
-            <Text style={styles.partyBannerSub}>สร้างห้องและโหวตอาหารร่วมกัน</Text>
+            {/* ปุ่มสุ่มกับเพื่อน */}
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => navigation.navigate('Party')}
+              activeOpacity={0.85}
+            >
+              <View style={[styles.actionBtnIcon, { backgroundColor: COLORS.secondary }]}>
+                <Text style={{ fontSize: 36 }}>🔥</Text>
+              </View>
+              <Text style={styles.actionBtnTitle}>สุ่มกับเพื่อน!</Text>
+              <Text style={styles.actionBtnDesc}>สร้างห้องโหวตร่วมกัน</Text>
+            </TouchableOpacity>
           </View>
-          <Text style={{ fontSize: 20, color: '#fff' }}>→</Text>
-        </TouchableOpacity>
+        </View>
 
         {/* ── Popular foods ── */}
         <View style={styles.popularSection}>
@@ -294,7 +212,9 @@ const styles = StyleSheet.create({
   logo2: { color: COLORS.primary },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   headerIconBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#f5f5f5', justifyContent: 'center', alignItems: 'center' },
-  avatarBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFE8D6', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: COLORS.primary },
+  // Task 5: Avatar button with image support
+  avatarBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFE8D6', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: COLORS.primary, overflow: 'hidden' },
+  avatarImg: { width: 40, height: 40, borderRadius: 20 },
   // Greeting
   greetingBox: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 },
   greetingSub: { fontSize: 15, color: '#888', fontWeight: '500' },
@@ -306,31 +226,26 @@ const styles = StyleSheet.create({
   catRow: { paddingHorizontal: 16, paddingBottom: 16, gap: 10 },
   catChip: { alignItems: 'center', backgroundColor: '#FFF5EE', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: '#FFD8B4', gap: 4, minWidth: 72 },
   catLabel: { fontSize: 11, fontWeight: '700', color: '#8B2626', textAlign: 'center' },
-  // Card Section
-  cardSection: { marginHorizontal: 20, backgroundColor: '#FFF8F0', borderRadius: 24, padding: 20, alignItems: 'center', marginBottom: 16, borderWidth: 1, borderColor: '#FFDFC0' },
-  cardTitle: { fontSize: 17, fontWeight: '800', color: '#8B2626', marginBottom: 4 },
-  cardSubtitle: { fontSize: 13, color: '#888', marginBottom: 16 },
-  cardTouchable: { width: 220, height: 260, alignItems: 'center', justifyContent: 'center' },
-  card: { backgroundColor: COLORS.white, width: '100%', height: '100%', borderRadius: 24, alignItems: 'center', justifyContent: 'center', position: 'absolute', backfaceVisibility: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.15, shadowRadius: 10, elevation: 8 },
-  cardFront: { backgroundColor: COLORS.secondary, borderWidth: 6, borderColor: '#FFF' },
-  cardBack: { backgroundColor: COLORS.white, padding: 20 },
-  cardQuestion: { fontSize: 80, fontWeight: '900', color: '#FFF', textShadowColor: 'rgba(0,0,0,0.2)', textShadowOffset: { width: 2, height: 2 }, textShadowRadius: 4 },
-  cardHint: { fontSize: 14, color: '#FFF', marginTop: 10, fontWeight: '600' },
-  noImagePlaceholder: { backgroundColor: '#F0F0F0', justifyContent: 'center', alignItems: 'center' },
-  noImageText: { color: '#999', fontSize: 13, fontWeight: '600' },
-  foodImage: { width: 90, height: 90, borderRadius: 16, marginBottom: 10 },
-  cardFoodName: { fontSize: 20, fontWeight: '900', color: '#2C3E50', textAlign: 'center', marginBottom: 8 },
-  cardBadge: { backgroundColor: '#FFF5EE', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, marginBottom: 8 },
-  cardBadgeText: { fontSize: 11, color: '#8B2626', fontWeight: '700' },
-  cardPrice: { fontSize: 14, color: COLORS.primary, fontWeight: 'bold' },
-  favBtn: { marginTop: 14, backgroundColor: '#FFF5F5', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, borderWidth: 1, borderColor: '#FFD1D1' },
-  favBtnText: { fontSize: 13, color: '#E74C3C', fontWeight: 'bold' },
-  flipBtn: { marginTop: 24, backgroundColor: COLORS.primary, paddingVertical: 14, paddingHorizontal: 44, borderRadius: 28, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 6 },
-  flipBtnText: { color: '#fff', fontSize: 16, fontWeight: '900' },
-  // Party
-  partyBanner: { marginHorizontal: 20, backgroundColor: '#8B2626', borderRadius: 20, padding: 18, flexDirection: 'row', alignItems: 'center', marginBottom: 24, gap: 14 },
-  partyBannerTitle: { fontSize: 16, fontWeight: '900', color: '#fff' },
-  partyBannerSub: { fontSize: 12, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
+  // Task 3: Action Section (แทนที่ Card Flip)
+  actionSection: {
+    marginHorizontal: 20, backgroundColor: '#FFF8F0', borderRadius: 24,
+    padding: 20, marginBottom: 20, borderWidth: 1, borderColor: '#FFDFC0',
+  },
+  actionSectionTitle: { fontSize: 18, fontWeight: '900', color: '#8B2626', textAlign: 'center', marginBottom: 4 },
+  actionSectionSub: { fontSize: 13, color: '#888', textAlign: 'center', marginBottom: 18 },
+  actionBtnRow: { flexDirection: 'row', gap: 12 },
+  actionBtn: {
+    flex: 1, backgroundColor: '#fff', borderRadius: 20, padding: 18,
+    alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08, shadowRadius: 6, elevation: 4, borderWidth: 1, borderColor: '#F0E0D0',
+  },
+  actionBtnIcon: {
+    width: 70, height: 70, borderRadius: 35, justifyContent: 'center', alignItems: 'center',
+    marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15, shadowRadius: 6, elevation: 4,
+  },
+  actionBtnTitle: { fontSize: 15, fontWeight: '900', color: '#2C3E50', marginBottom: 4 },
+  actionBtnDesc: { fontSize: 11, color: '#999', textAlign: 'center', lineHeight: 15 },
   // Popular
   popularSection: { marginBottom: 20 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 14 },
@@ -346,6 +261,3 @@ const styles = StyleSheet.create({
   quickBtn: { flex: 1, backgroundColor: '#F7F7F7', borderRadius: 16, padding: 14, alignItems: 'center', gap: 6 },
   quickBtnText: { fontSize: 12, fontWeight: '700', color: '#555', textAlign: 'center' },
 });
-
-
-
