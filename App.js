@@ -67,28 +67,49 @@ function MainTabs() {
       <Tab.Screen
         name="SoloTab"
         component={SoloScreen}
-        options={{
-          title: '',
+        options={({ navigation }) => ({
+          title: 'สุ่มเมนู',
+          headerShown: true,
+          headerTitleAlign: 'center',
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => navigation.navigate('HomeTab')} style={{ marginLeft: 16 }}>
+              <Text style={{ fontSize: 16, fontWeight: 'bold', color: COLORS.secondary }}>{'< หน้าแรก'}</Text>
+            </TouchableOpacity>
+          ),
           tabBarButton: (props) => <CenterTabButton {...props} />,
-        }}
+        })}
       />
       <Tab.Screen
         name="FavTab"
         component={FavScreen}
-        options={{
+        options={({ navigation }) => ({
           title: 'เมนูโปรด',
+          headerShown: true,
+          headerTitleAlign: 'center',
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => navigation.navigate('HomeTab')} style={{ marginLeft: 16 }}>
+              <Text style={{ fontSize: 16, fontWeight: 'bold', color: COLORS.secondary }}>{'< หน้าแรก'}</Text>
+            </TouchableOpacity>
+          ),
           tabBarIcon: ({ focused }) => (
             <Text style={{ fontSize: 20 }}>{focused ? '❤️' : '🤍'}</Text>
           ),
-        }}
+        })}
       />
       <Tab.Screen
         name="AccountTab"
         component={SettingsScreen}
-        options={{
+        options={({ navigation }) => ({
           title: 'บัญชี',
+          headerShown: true,
+          headerTitleAlign: 'center',
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => navigation.navigate('HomeTab')} style={{ marginLeft: 16 }}>
+              <Text style={{ fontSize: 16, fontWeight: 'bold', color: COLORS.secondary }}>{'< หน้าแรก'}</Text>
+            </TouchableOpacity>
+          ),
           tabBarIcon: () => <Text style={{ fontSize: 20 }}>👤</Text>,
-        }}
+        })}
       />
     </Tab.Navigator>
   );
