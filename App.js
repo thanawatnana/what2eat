@@ -59,10 +59,17 @@ function MainTabs() {
       <Tab.Screen
         name="SearchTab"
         component={SearchScreen}
-        options={{
+        options={({ navigation }) => ({
           title: 'ค้นหา',
+          headerShown: true,
+          headerTitleAlign: 'center',
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => navigation.navigate('HomeTab')} style={{ marginLeft: 16 }}>
+              <Text style={{ fontSize: 16, fontWeight: 'bold', color: COLORS.secondary }}>{'< หน้าแรก'}</Text>
+            </TouchableOpacity>
+          ),
           tabBarIcon: () => <Text style={{ fontSize: 20 }}>🔍</Text>,
-        }}
+        })}
       />
       <Tab.Screen
         name="SoloTab"
