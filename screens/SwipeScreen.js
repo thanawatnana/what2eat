@@ -139,19 +139,15 @@ export default function SwipeScreen({ route, navigation }) {
                 });
 
                 const sortedFoods = Object.keys(likeCounts).sort((a, b) => likeCounts[b] - likeCounts[a]);
-                let finalMatch = null;
                 
-                // คัดเฉพาะเมนูที่ทุกคน Like
+                // คัดเฉพาะเมนูที่ทุกคน Like (คะแนนโหวตเท่ากับจำนวนผู้เล่น)
                 const perfectMatches = sortedFoods.filter(id => likeCounts[id] >= totalPlayers);
                 
+                let finalMatch = 'no_match'; // ค่า default ถ้าไม่มีใครใจตรงกันเลย
+
                 if (perfectMatches.length > 0) {
-                    finalMatch = perfectMatches[0];
-                } else if (sortedFoods.length > 0) {
-                    // ถ้าไม่มีที่ชอบตรงกันทุกคน เอาอันที่คนชอบมากสุด
-                    finalMatch = sortedFoods[0];
-                } else {
-                    // Fix Bug 4: ถ้าไม่มีใครชอบอะไรเลย สุ่มเอา 1 อัน!
-                    finalMatch = currentFoodList[Math.floor(Math.random() * currentFoodList.length)].id;
+                    // ถ้ามีใจตรงกันหลายเมนู ให้สุ่มเลือก 1 เมนูจากที่ตรงกัน
+                    finalMatch = perfectMatches[Math.floor(Math.random() * perfectMatches.length)];
                 }
 
                 await supabase
