@@ -1,4 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
+import { decode } from 'base64-arraybuffer';
 import { useCallback, useEffect, useState, useRef } from 'react';
 import {
   ActivityIndicator, Alert,
@@ -51,7 +52,8 @@ export default function SoloScreen({ navigation }) {
   const [newCategory, setNewCategory] = useState('Thai');
   const [newCustomCategory, setNewCustomCategory] = useState('');
   const [newPrice, setNewPrice] = useState('');
-  const [newImageUri, setNewImageUri] = useState(null);  // URI รูปที่เลือก (local)
+  const [newImageUri, setNewImageUri] = useState(null);
+  const [newImageBase64, setNewImageBase64] = useState(null);  // URI รูปที่เลือก (local)
   const [savingFood, setSavingFood] = useState(false);
   const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
 
@@ -232,7 +234,7 @@ export default function SoloScreen({ navigation }) {
       // อัปโหลดรูปก่อน (ถ้าเลือกไว้) พร้อมระบุหมวดหมู่
       let imageUrl = null;
       if (newImageUri) {
-        imageUrl = await uploadFoodImage(newImageUri, finalCategory);
+        imageUrl = await uploadFoodImage(newImageBase64, finalCategory);
       }
 
       const { error } = await supabase.from('user_foods').insert({
@@ -261,7 +263,7 @@ export default function SoloScreen({ navigation }) {
     setNewCategory('Thai');
     setNewCustomCategory('');
     setNewPrice('');
-    setNewImageUri(null);
+    setNewImageUri(null); setNewImageBase64(null);
     setCategoryPickerOpen(false);
   };
 

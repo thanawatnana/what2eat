@@ -7,6 +7,7 @@ import {
   TextInput,
   TouchableOpacity, View,
 } from 'react-native';
+import { decode } from 'base64-arraybuffer';
 import { COLORS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabase';
@@ -27,7 +28,6 @@ export default function SettingsScreen({ navigation }) {
   useEffect(() => {
     if (!user) return;
 
-    // Bug 6 fix: Guest ไม่ควรมี avatar — ลบ cache เก่าออก + force null
     if (user.is_guest) {
       setAvatar(null);
       AsyncStorage.removeItem(AVATAR_CACHE_KEY + user.id).catch(() => {});
@@ -40,24 +40,20 @@ export default function SettingsScreen({ navigation }) {
     const path = `${user.id}/avatar.jpg`;
     const { data } = supabase.storage.from('avatars').getPublicUrl(path);
     if (data?.publicUrl) {
-      // Bug 6 fix: ใช้ timestamp เพื่อ bust cache เสมอ
       const url = data.publicUrl + '?bust=' + Date.now();
       setAvatar(url);
     }
   }, [user]);
 
   // อัปโหลดรูปโปรไฟล์ไป Supabase Storage + อัปเดต profile_image_url ใน DB
-  const uploadToSupabase = async (uri) => {
+  const uploadToSupabase = async (base64Str) => {
     setUploading(true);
     try {
       const path = `${user.id}/avatar.jpg`;
-      // Fix 5: ใช้ arrayBuffer() แทน blob() — blob() มักสร้างไฟล์เปล่าบน React Native/Expo
-      const response = await fetch(uri);
-      const arrayBuffer = await response.arrayBuffer();
 
       const { error } = await supabase.storage
         .from('avatars')
-        .upload(path, arrayBuffer, { contentType: 'image/jpeg', upsert: true });
+        .upload(path, decode(base64Str), { contentType: 'image/jpeg', upsert: true });
 
       if (error) throw error;
 
@@ -66,7 +62,6 @@ export default function SettingsScreen({ navigation }) {
       setAvatar(url);
       await AsyncStorage.setItem(AVATAR_CACHE_KEY + user.id, url);
 
-      // Task 5: อัปเดต profile_image_url ใน users table
       await supabase.from('users').update({ profile_image_url: url }).eq('id', user.id);
 
       Alert.alert('✅', 'อัปโหลดรูปสำเร็จ!');
@@ -81,19 +76,19 @@ export default function SettingsScreen({ navigation }) {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') { Alert.alert('ไม่ได้รับสิทธิ์', 'กรุณาอนุญาตให้เข้าถึงรูปภาพ'); return; }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true, aspect: [1, 1], quality: 0.7,
+      mediaTypes: ['images'],
+      allowsEditing: true, aspect: [1, 1], quality: 0.7, base64: true,
     });
-    if (!result.canceled && result.assets[0]) await uploadToSupabase(result.assets[0].uri);
+    if (!result.canceled && result.assets[0].base64) await uploadToSupabase(result.assets[0].base64);
   };
 
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') { Alert.alert('ไม่ได้รับสิทธิ์', 'กรุณาอนุญาตให้เข้าถึงกล้อง'); return; }
     const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true, aspect: [1, 1], quality: 0.7,
+      allowsEditing: true, aspect: [1, 1], quality: 0.7, base64: true,
     });
-    if (!result.canceled && result.assets[0]) await uploadToSupabase(result.assets[0].uri);
+    if (!result.canceled && result.assets[0].base64) await uploadToSupabase(result.assets[0].base64);
   };
 
   const handleChangePhoto = () => {

@@ -1,4 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
+import { decode } from 'base64-arraybuffer';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator, Alert,
@@ -42,6 +43,7 @@ export default function AllFoodsScreen({ navigation }) {
   const [editCustomCategory, setEditCustomCategory] = useState('');
   const [editPrice, setEditPrice] = useState('');
   const [editImageUri, setEditImageUri] = useState(null);
+  const [editImageBase64, setEditImageBase64] = useState(null);
   const [updatingFood, setUpdatingFood] = useState(false);
   const [editCategoryOpen, setEditCategoryOpen] = useState(false);
 
@@ -85,24 +87,25 @@ export default function AllFoodsScreen({ navigation }) {
   };
 
   // ── Image Picker helper ───────────────────────────────────────────────────
-  const pickImage = async (setUri) => {
+  const pickImage = async (setUri, setBase64) => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') { Alert.alert('ไม่ได้รับสิทธิ์', 'กรุณาอนุญาตให้เข้าถึงรูปภาพ'); return; }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true, aspect: [1, 1], quality: 0.7,
+      mediaTypes: ['images'],
+      allowsEditing: true, aspect: [1, 1], quality: 0.7, base64: true,
     });
-    if (!result.canceled && result.assets[0]) setUri(result.assets[0].uri);
+    if (!result.canceled && result.assets[0].base64) {
+      setUri(result.assets[0].uri);
+      setBase64(result.assets[0].base64);
+    }
   };
 
-  // ── Upload Image to Supabase Storage (Fix 5: arrayBuffer ทำงานได้ถูกต้องบน Expo แต่ blob() เปล่า)
-  const uploadFoodImage = async (uri) => {
+  // ── Upload Image to Supabase Storage ─────────────────────────────────────
+  const uploadFoodImage = async (base64Str) => {
     const path = `user_foods/${user.id}/${Date.now()}.jpg`;
-    const response = await fetch(uri);
-    const arrayBuffer = await response.arrayBuffer();
     const { error } = await supabase.storage
       .from('food-images')
-      .upload(path, arrayBuffer, { contentType: 'image/jpeg', upsert: true });
+      .upload(path, decode(base64Str), { contentType: 'image/jpeg', upsert: true });
     if (error) throw error;
     const { data } = supabase.storage.from('food-images').getPublicUrl(path);
     return data.publicUrl;
@@ -114,7 +117,7 @@ export default function AllFoodsScreen({ navigation }) {
     setSavingFood(true);
     try {
       let imageUrl = null;
-      if (newImageUri) imageUrl = await uploadFoodImage(newImageUri);
+      if (newImageBase64) imageUrl = await uploadFoodImage(newImageBase64);
 
       const finalCategory = newCategory === 'อื่นๆ'
         ? (newCustomCategory.trim() || 'อื่นๆ')
@@ -266,7 +269,7 @@ export default function AllFoodsScreen({ navigation }) {
                 <Text style={styles.modalTitle}>➕ เพิ่มเมนูส่วนตัว</Text>
 
                 <Text style={styles.modalLabel}>รูปภาพเมนู</Text>
-                <TouchableOpacity style={styles.imagePicker} onPress={() => pickImage(setNewImageUri)}>
+                <TouchableOpacity style={styles.imagePicker} onPress={() => pickImage(setNewImageUri, setNewImageBase64)}>
                   {newImageUri
                     ? <Image source={{ uri: newImageUri }} style={styles.imagePreview} />
                     : <View style={styles.imagePlaceholder}><Text style={{ fontSize: 32 }}>📷</Text><Text style={styles.imagePlaceholderText}>แตะเพื่อเลือกรูป</Text></View>
@@ -321,7 +324,7 @@ export default function AllFoodsScreen({ navigation }) {
                 <Text style={styles.modalTitle}>✏️ แก้ไขเมนู</Text>
 
                 <Text style={styles.modalLabel}>รูปภาพเมนู (แตะเพื่อเปลี่ยน)</Text>
-                <TouchableOpacity style={styles.imagePicker} onPress={() => pickImage(setEditImageUri)}>
+                <TouchableOpacity style={styles.imagePicker} onPress={() => pickImage(setEditImageUri, setEditImageBase64)}>
                   {editImageUri
                     ? <Image source={{ uri: editImageUri }} style={styles.imagePreview} />
                     : editingFood?.image_url
