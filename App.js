@@ -76,7 +76,7 @@ function MainTabs() {
         name="FavTab"
         component={FavScreen}
         options={{
-          title: 'โปรด',
+          title: 'เมนูโปรด',
           tabBarIcon: ({ focused }) => (
             <Text style={{ fontSize: 20 }}>{focused ? '❤️' : '🤍'}</Text>
           ),
