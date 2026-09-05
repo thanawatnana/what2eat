@@ -102,27 +102,12 @@ export default function App() {
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
           <Stack.Screen name="MainTabs" component={MainTabs} />
-          <Stack.Screen
-            name="Party"
-            component={PartyScreen}
-            options={({ navigation }) => ({
-              headerShown: true,
-              title: '🔥 ปาร์ตี้',
-              headerStyle: { backgroundColor: COLORS.secondary },
-              headerTintColor: '#fff',
-              // Bug 2 fix: explicit back button that always works
-              headerLeft: () => (
-                <TouchableOpacity onPress={() => navigation.goBack()} style={{ paddingHorizontal: 10 }}>
-                  <Text style={{ fontSize: 18, color: '#fff' }}>{Platform.OS === 'ios' ? '‹ กลับ' : '← กลับ'}</Text>
-                </TouchableOpacity>
-              ),
-            })}
-          />
+          <Stack.Screen name="Party" component={PartyScreen} options={({ navigation }) => ({ headerShown: true, title: '🔥 ปาร์ตี้', headerStyle: { backgroundColor: COLORS.secondary }, headerTintColor: '#fff', headerBackVisible: false, headerLeft: ({ tintColor }) => (<TouchableOpacity onPress={() => navigation.navigate('MainTabs', { screen: 'HomeTab' })} style={{ marginLeft: 8, marginRight: 16 }}><Text style={{ color: tintColor, fontSize: 16, fontWeight: 'bold' }}>{'< หน้าแรก'}</Text></TouchableOpacity>) })} />
           <Stack.Screen name="Lobby" component={LobbyScreen} options={{ headerShown: true, title: '🏕 ล็อบบี้', headerStyle: { backgroundColor: COLORS.secondary }, headerTintColor: '#fff', headerBackVisible: false }} />
           <Stack.Screen name="Swipe" component={SwipeScreen} options={{ headerShown: true, title: '🗳 โหวต', headerStyle: { backgroundColor: COLORS.secondary }, headerTintColor: '#fff', headerBackVisible: false }} />
           <Stack.Screen name="Result" component={ResultScreen} options={{ headerShown: true, title: '🎉 ผลลัพธ์', headerStyle: { backgroundColor: COLORS.secondary }, headerTintColor: '#fff', headerBackVisible: false }} />
-          <Stack.Screen name="History" component={HistoryScreen} options={{ headerShown: true, title: 'ประวัติการสุ่ม', headerTintColor: COLORS.secondary }} />
-          <Stack.Screen name="AllFoods" component={AllFoodsScreen} options={{ headerShown: true, title: 'เมนูอาหารทั้งหมด', headerTintColor: COLORS.secondary }} />
+          <Stack.Screen name="History" component={HistoryScreen} options={({ navigation }) => ({ headerShown: true, title: 'ประวัติการสุ่ม', headerTintColor: COLORS.secondary, headerBackVisible: false, headerLeft: ({ tintColor }) => (<TouchableOpacity onPress={() => navigation.navigate('MainTabs', { screen: 'HomeTab' })} style={{ marginLeft: 8, marginRight: 16 }}><Text style={{ color: tintColor, fontSize: 16, fontWeight: 'bold' }}>{'< หน้าแรก'}</Text></TouchableOpacity>) })} />
+          <Stack.Screen name="AllFoods" component={AllFoodsScreen} options={({ navigation }) => ({ headerShown: true, title: 'เมนูอาหารทั้งหมด', headerTintColor: COLORS.secondary, headerBackVisible: false, headerLeft: ({ tintColor }) => (<TouchableOpacity onPress={() => navigation.navigate('MainTabs', { screen: 'HomeTab' })} style={{ marginLeft: 8, marginRight: 16 }}><Text style={{ color: tintColor, fontSize: 16, fontWeight: 'bold' }}>{'< หน้าแรก'}</Text></TouchableOpacity>) })} />
           <Stack.Screen name="Search" component={SearchScreen} options={{ headerShown: false }} />
         </Stack.Navigator>
       </NavigationContainer>

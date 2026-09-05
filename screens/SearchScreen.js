@@ -52,8 +52,8 @@ export default function SearchScreen({ navigation }) {
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-          <Text style={{ fontSize: 22 }}>←</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('MainTabs', { screen: 'HomeTab' })} style={styles.back}>
+          <Text style={{ fontSize: 16, fontWeight: 'bold' }}>{'< หน้าแรก'}</Text>
         </TouchableOpacity>
         <TextInput
           style={styles.input}
