@@ -1,10 +1,17 @@
-import React, { useState, useRef, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, ScrollView, StyleSheet,
-  SafeAreaView, Animated, Dimensions, StatusBar, Image, Alert
+  Alert,
+  Animated,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text, TouchableOpacity,
+  View
 } from 'react-native';
 import { COLORS } from '../constants/theme';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabase';
 
@@ -178,16 +185,6 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.searchPlaceholder}>ค้นหาอาหาร, เมนู, หรือหมวดหมู่...</Text>
         </TouchableOpacity>
 
-        {/* ── Category chips ── */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catRow}>
-          {CATEGORIES.map((cat, i) => (
-            <TouchableOpacity key={i} style={styles.catChip}
-              onPress={() => navigation.navigate('AllFoods', { category: cat.value })}>
-              <Text style={{ fontSize: 24 }}>{cat.emoji}</Text>
-              <Text style={styles.catLabel}>{cat.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
 
         {/* ── Mystery Card Flip ── */}
         <View style={styles.cardSection}>
@@ -257,10 +254,10 @@ export default function HomeScreen({ navigation }) {
         <TouchableOpacity style={styles.partyBanner} onPress={() => navigation.navigate('Party')} activeOpacity={0.85}>
           <Text style={{ fontSize: 30 }}>🔥</Text>
           <View style={{ flex: 1 }}>
-            <Text style={styles.partyBannerTitle}>สุ่มกับเพื่อน!</Text>
+            <Text style={styles.partyBannerTitle}>สุ่มกับเพื่อน</Text>
             <Text style={styles.partyBannerSub}>สร้างห้องและโหวตอาหารร่วมกัน</Text>
           </View>
-          <Text style={{ fontSize: 20, color: '#fff' }}>→</Text>
+          <Text style={{ fontSize: 20, color: '#fff' }}></Text>
         </TouchableOpacity>
 
         {/* ── Popular foods ── */}
@@ -268,7 +265,7 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>🍽️ เมนูยอดนิยม</Text>
             <TouchableOpacity onPress={() => navigation.navigate('AllFoods')}>
-              <Text style={styles.seeAll}>ดูทั้งหมด →</Text>
+              <Text style={styles.seeAll}>ดูทั้งหมด</Text>
             </TouchableOpacity>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}
@@ -300,7 +297,7 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
           <TouchableOpacity style={styles.quickBtn} onPress={() => navigation.navigate('FavTab')}>
             <Text style={{ fontSize: 24 }}>❤️</Text>
-            <Text style={styles.quickBtnText}>โปรด</Text>
+            <Text style={styles.quickBtnText}>เมนูโปรด</Text>
           </TouchableOpacity>
         </View>
 
@@ -372,4 +369,4 @@ const styles = StyleSheet.create({
 });
 
 
-
+
