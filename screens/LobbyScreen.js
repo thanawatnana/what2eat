@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     StyleSheet, Text, View, FlatList, TouchableOpacity,
-    SafeAreaView, ActivityIndicator, Alert, Share
+    SafeAreaView, ActivityIndicator, Alert, Share, TextInput, KeyboardAvoidingView, Platform
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { COLORS } from '../constants/theme';
@@ -11,14 +11,18 @@ export default function LobbyScreen({ route, navigation }) {
     const { roomId, roomCode, participantId, playerName, isHost } = route.params;
     const [participants, setParticipants] = useState([]);
     const [isStarting, setIsStarting] = useState(false);
+    
+    // Custom Foods State
+    const [customFoods, setCustomFoods] = useState([]);
+    const [newFoodName, setNewFoodName] = useState('');
+    
     const channelRef = useRef(null);
 
     // ── โหลดรายชื่อผู้เล่นและ Realtime subscription ──────────────
     useEffect(() => {
-        // โหลดครั้งแรก
         fetchParticipants();
+        fetchRoomData();
 
-        // Subscribe Realtime เมื่อมีคนเข้า/ออก
         channelRef.current = supabase
             .channel(`room-${roomId}`)
             .on(
@@ -30,13 +34,44 @@ export default function LobbyScreen({ route, navigation }) {
                 'postgres_changes',
                 { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` },
                 (payload) => {
-                    // เมื่อ host กด Start → status เปลี่ยน → ทุกคนไป SwipeScreen
                     if (payload.new.status === 'playing') {
+                        let parsedFoods = null;
+                        if (payload.new.matched_food_id && payload.new.matched_food_id.startsWith('[')) {
+                            try { parsedFoods = JSON.parse(payload.new.matched_food_id); } catch(e) {}
+                        }
                         navigation.replace('Swipe', {
-                            roomId,
-                            roomCode,
-                            participantId,
-                            playerName,
+                            roomId, roomCode, participantId, playerName, customFoods: parsedFoods
+                        });
+                    } else if (payload.new.status === 'waiting' && payload.new.matched_food_id) {
+                        try {
+                            const parsed = JSON.parse(payload.new.matched_food_id);
+                            if (Array.isArray(parsed)) setCustomFoods(parsed);
+                        } catch(e) {}
+                    }
+                }
+            )
+            .on(
+                'broadcast',
+                { event: 'add_custom_food' },
+                (payload) => {
+                    if (isHost) {
+                        setCustomFoods(prev => {
+                            const newList = [...prev, payload.payload.food];
+                            supabase.from('rooms').update({ matched_food_id: JSON.stringify(newList) }).eq('id', roomId).then();
+                            return newList;
+                        });
+                    }
+                }
+            )
+            .on(
+                'broadcast',
+                { event: 'remove_custom_food' },
+                (payload) => {
+                    if (isHost) {
+                        setCustomFoods(prev => {
+                            const newList = prev.filter(f => f.id !== payload.payload.foodId);
+                            supabase.from('rooms').update({ matched_food_id: JSON.stringify(newList) }).eq('id', roomId).then();
+                            return newList;
                         });
                     }
                 }
@@ -49,42 +84,61 @@ export default function LobbyScreen({ route, navigation }) {
     }, [roomId]);
 
     const fetchParticipants = async () => {
-        const { data } = await supabase
-            .from('participants')
-            .select('*')
-            .eq('room_id', roomId)
-            .order('joined_at', { ascending: true });
+        const { data } = await supabase.from('participants').select('*').eq('room_id', roomId).order('joined_at', { ascending: true });
         if (data) setParticipants(data);
     };
 
-    // ── Host: เริ่มเกม ─────────────────────────────────────────────
+    const fetchRoomData = async () => {
+        const { data } = await supabase.from('rooms').select('matched_food_id').eq('id', roomId).single();
+        if (data?.matched_food_id && data.matched_food_id.startsWith('[')) {
+            try { setCustomFoods(JSON.parse(data.matched_food_id)); } catch(e) {}
+        }
+    };
+
     const handleStartGame = async () => {
         if (participants.length < 2) {
             Alert.alert('⚠️ ผู้เล่นไม่พอ', 'ต้องมีอย่างน้อย 2 คนถึงจะเริ่มได้!');
             return;
         }
         setIsStarting(true);
-        const { error } = await supabase
-            .from('rooms')
-            .update({ status: 'playing' })
-            .eq('id', roomId);
-
+        const { error } = await supabase.from('rooms').update({ status: 'playing' }).eq('id', roomId);
         if (error) {
             Alert.alert('❌ Error', error.message);
             setIsStarting(false);
         }
-        // การ navigate จะเกิดจาก Realtime listener ด้านบน (ทั้ง host และ guest)
     };
 
-    // Bug 3 fix: Copy room code ที่ถูกต้องลง clipboard
     const handleCopyCode = async () => {
         await Clipboard.setStringAsync(roomCode);
         Alert.alert('📋 คัดลอกแล้ว!', `รหัสห้อง ${roomCode} ถูกคัดลอกแล้ว`);
     };
 
-    // ── แชร์รหัสห้อง ───────────────────────────────────────────────
     const handleShare = () => {
         Share.share({ message: `มาเล่น What2Eat กันเถอะ! 🍴\nรหัสห้อง: ${roomCode}` });
+    };
+
+    const handleAddCustomFood = () => {
+        if (!newFoodName.trim()) return;
+        const newFood = { id: `custom-${Date.now()}-${Math.floor(Math.random()*1000)}`, name: newFoodName.trim(), emoji: '🍽️' };
+        
+        if (isHost) {
+            const newList = [...customFoods, newFood];
+            setCustomFoods(newList);
+            supabase.from('rooms').update({ matched_food_id: JSON.stringify(newList) }).eq('id', roomId);
+        } else {
+            channelRef.current.send({ type: 'broadcast', event: 'add_custom_food', payload: { food: newFood } });
+        }
+        setNewFoodName('');
+    };
+
+    const handleRemoveCustomFood = (foodId) => {
+        if (isHost) {
+            const newList = customFoods.filter(f => f.id !== foodId);
+            setCustomFoods(newList);
+            supabase.from('rooms').update({ matched_food_id: JSON.stringify(newList) }).eq('id', roomId);
+        } else {
+            channelRef.current.send({ type: 'broadcast', event: 'remove_custom_food', payload: { foodId } });
+        }
     };
 
     const renderParticipant = ({ item, index }) => (
@@ -100,57 +154,88 @@ export default function LobbyScreen({ route, navigation }) {
 
     return (
         <SafeAreaView style={styles.container}>
-            {/* Header รหัสห้อง */}
-            <View style={styles.headerCard}>
-                <Text style={styles.roomLabel}>Room Code</Text>
-                <Text style={styles.roomCode}>{roomCode}</Text>
-                {/* Bug 3 fix: ปุ่ม Copy + Share */}
-                <View style={styles.codeBtnRow}>
-                    <TouchableOpacity style={styles.copyBtn} onPress={handleCopyCode}>
-                        <Text style={styles.shareBtnText}>📋 Copy</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
-                        <Text style={styles.shareBtnText}>📤 Share</Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
-
-            {/* รายชื่อผู้เล่น */}
-            <View style={styles.playersCard}>
-                <View style={styles.playersHeader}>
-                    <Text style={styles.playersTitle}>Players</Text>
-                    <View style={styles.countBadge}>
-                        <Text style={styles.countBadgeText}>{participants.length}</Text>
-                    </View>
-                </View>
-
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{flex: 1}}>
                 <FlatList
                     data={participants}
                     keyExtractor={(item) => item.id}
+                    ListHeaderComponent={
+                        <>
+                            {/* Header รหัสห้อง */}
+                            <View style={styles.headerCard}>
+                                <Text style={styles.roomLabel}>Room Code</Text>
+                                <Text style={styles.roomCode}>{roomCode}</Text>
+                                <View style={styles.codeBtnRow}>
+                                    <TouchableOpacity style={styles.copyBtn} onPress={handleCopyCode}>
+                                        <Text style={styles.shareBtnText}>📋 Copy</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
+                                        <Text style={styles.shareBtnText}>📤 Share</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                            
+                            {/* ส่วนเพิ่มเมนูอาหารเอง */}
+                            <View style={styles.customFoodCard}>
+                                <Text style={styles.customFoodTitle}>✏️ กำหนดเมนูสุ่มเอง (ตัวเลือกเสริม)</Text>
+                                <Text style={styles.customFoodSubtitle}>ถ้ามีเมนูในนี้ ระบบจะสุ่มเฉพาะเมนูนี้เท่านั้น!</Text>
+                                <View style={styles.addFoodRow}>
+                                    <TextInput 
+                                        style={styles.addFoodInput}
+                                        placeholder="พิมพ์ชื่อเมนูที่อยากกิน..."
+                                        value={newFoodName}
+                                        onChangeText={setNewFoodName}
+                                        maxLength={30}
+                                    />
+                                    <TouchableOpacity style={styles.addFoodBtn} onPress={handleAddCustomFood}>
+                                        <Text style={styles.addFoodBtnText}>เพิ่ม</Text>
+                                    </TouchableOpacity>
+                                </View>
+                                {customFoods.length > 0 && (
+                                    <View style={styles.customFoodList}>
+                                        {customFoods.map(food => (
+                                            <View key={food.id} style={styles.customFoodBadge}>
+                                                <Text style={styles.customFoodBadgeText}>{food.name}</Text>
+                                                <TouchableOpacity onPress={() => handleRemoveCustomFood(food.id)}>
+                                                    <Text style={{color: '#E74C3C', marginLeft: 6, fontWeight: 'bold'}}>✕</Text>
+                                                </TouchableOpacity>
+                                            </View>
+                                        ))}
+                                    </View>
+                                )}
+                            </View>
+                            
+                            <View style={styles.playersHeader}>
+                                <Text style={styles.playersTitle}>Players</Text>
+                                <View style={styles.countBadge}>
+                                    <Text style={styles.countBadgeText}>{participants.length}</Text>
+                                </View>
+                            </View>
+                        </>
+                    }
                     renderItem={renderParticipant}
-                    scrollEnabled={false}
+                    contentContainerStyle={{ paddingBottom: 20 }}
                     ListEmptyComponent={<ActivityIndicator color={COLORS.primary} style={{ marginTop: 20 }} />}
                 />
-            </View>
 
-            {/* ปุ่ม Start (เฉพาะ Host) */}
-            {isHost ? (
-                <TouchableOpacity
-                    style={[styles.startBtn, (participants.length < 2 || isStarting) && styles.startBtnDisabled]}
-                    onPress={handleStartGame}
-                    disabled={participants.length < 2 || isStarting}
-                >
-                    {isStarting
-                        ? <ActivityIndicator color={COLORS.white} />
-                        : <Text style={styles.startBtnText}>🎮 Start Game!</Text>
-                    }
-                </TouchableOpacity>
-            ) : (
-                <View style={styles.waitingBox}>
-                    <ActivityIndicator color={COLORS.secondary} size="small" />
-                    <Text style={styles.waitingText}>Waiting for host to start...</Text>
-                </View>
-            )}
+                {/* ปุ่ม Start (เฉพาะ Host) */}
+                {isHost ? (
+                    <TouchableOpacity
+                        style={[styles.startBtn, (participants.length < 2 || isStarting) && styles.startBtnDisabled]}
+                        onPress={handleStartGame}
+                        disabled={participants.length < 2 || isStarting}
+                    >
+                        {isStarting
+                            ? <ActivityIndicator color={COLORS.white} />
+                            : <Text style={styles.startBtnText}>🎮 Start Game!</Text>
+                        }
+                    </TouchableOpacity>
+                ) : (
+                    <View style={styles.waitingBox}>
+                        <ActivityIndicator color={COLORS.secondary} size="small" />
+                        <Text style={styles.waitingText}>Waiting for host to start...</Text>
+                    </View>
+                )}
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }
@@ -195,4 +280,14 @@ const styles = StyleSheet.create({
     startBtnText: { color: COLORS.white, fontSize: 18, fontWeight: 'bold' },
     waitingBox: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 18 },
     waitingText: { color: COLORS.secondary, fontSize: 15, fontWeight: '600' },
+    customFoodCard: { backgroundColor: COLORS.white, borderRadius: 20, padding: 20, marginBottom: 20 },
+    customFoodTitle: { fontSize: 16, fontWeight: 'bold', color: COLORS.textDark, marginBottom: 4 },
+    customFoodSubtitle: { fontSize: 13, color: 'gray', marginBottom: 15 },
+    addFoodRow: { flexDirection: 'row', gap: 10, marginBottom: 15 },
+    addFoodInput: { flex: 1, backgroundColor: '#F8F9FA', borderRadius: 12, paddingHorizontal: 15, paddingVertical: 10, borderWidth: 1, borderColor: '#EEE' },
+    addFoodBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 20, justifyContent: 'center', borderRadius: 12 },
+    addFoodBtnText: { color: COLORS.white, fontWeight: 'bold' },
+    customFoodList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    customFoodBadge: { flexDirection: 'row', backgroundColor: '#F0F0F0', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, alignItems: 'center' },
+    customFoodBadgeText: { fontSize: 14, color: COLORS.textDark, fontWeight: '500' },
 });

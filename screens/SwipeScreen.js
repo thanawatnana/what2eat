@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     StyleSheet, Text, View, TouchableOpacity, SafeAreaView,
-    ActivityIndicator, Animated, Alert
+    ActivityIndicator, Animated, Alert, Image
 } from 'react-native';
 import { COLORS } from '../constants/theme';
-import { foodList } from '../data/foods';
+import { foodList as fallbackFoodList } from '../data/foods';
 import { supabase } from '../supabase';
 
 export default function SwipeScreen({ route, navigation }) {
-    const { roomId, roomCode, participantId, playerName } = route.params;
+    const { roomId, roomCode, participantId, playerName, customFoods } = route.params;
 
+    const [currentFoodList, setCurrentFoodList] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isDone, setIsDone] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -19,9 +20,22 @@ export default function SwipeScreen({ route, navigation }) {
     const fadeAnim = useRef(new Animated.Value(1)).current;
     const scaleAnim = useRef(new Animated.Value(1)).current;
 
-    const currentFood = foodList[currentIndex];
+    // 1. โหลดข้อมูลเมนูอาหาร
+    useEffect(() => {
+        if (customFoods && customFoods.length > 0) {
+            setCurrentFoodList(customFoods);
+        } else {
+            supabase.from('foods').select('*').then(({ data }) => {
+                if (data && data.length > 0) {
+                    setCurrentFoodList(data);
+                } else {
+                    setCurrentFoodList(fallbackFoodList);
+                }
+            });
+        }
+    }, [customFoods]);
 
-    // Subscribe Realtime — รอ matched_food_id เพื่อไป ResultScreen
+    // 2. Subscribe Realtime — รอ matched_food_id เพื่อไป ResultScreen
     useEffect(() => {
         channelRef.current = supabase
             .channel(`result-${roomId}`)
@@ -33,6 +47,7 @@ export default function SwipeScreen({ route, navigation }) {
                         navigation.replace('Result', {
                             matchedFoodId: payload.new.matched_food_id,
                             roomCode,
+                            customFoods // ส่งต่อให้ ResultScreen เพื่อหาชื่อเมนู
                         });
                     }
                 }
@@ -42,9 +57,8 @@ export default function SwipeScreen({ route, navigation }) {
         return () => {
             if (channelRef.current) supabase.removeChannel(channelRef.current);
         };
-    }, [roomId]);
+    }, [roomId, customFoods]);
 
-    // Animation เมื่อ swipe
     const animateSwipe = (callback) => {
         Animated.parallel([
             Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
@@ -56,7 +70,6 @@ export default function SwipeScreen({ route, navigation }) {
         });
     };
 
-    // บันทึก swipe ลง Supabase
     const recordSwipe = async (foodId, isLiked) => {
         const { error } = await supabase.from('swipes').insert({
             room_id: roomId,
@@ -67,73 +80,85 @@ export default function SwipeScreen({ route, navigation }) {
         if (error) console.error('Swipe error:', error.message);
     };
 
-    // กด Like ❤️
     const handleLike = () => {
+        const currentFood = currentFoodList[currentIndex];
         animateSwipe(async () => {
             await recordSwipe(currentFood.id, true);
             goNext();
         });
     };
 
-    // กด Skip ❌
     const handleSkip = () => {
+        const currentFood = currentFoodList[currentIndex];
         animateSwipe(async () => {
             await recordSwipe(currentFood.id, false);
             goNext();
         });
     };
 
-    // ไปการ์ดถัดไป หรือ Submit เมื่อครบ
     const goNext = () => {
         const nextIndex = currentIndex + 1;
-        if (nextIndex >= foodList.length) {
+        if (nextIndex >= currentFoodList.length) {
             finishSwiping();
         } else {
             setCurrentIndex(nextIndex);
         }
     };
 
-    // เสร็จสิ้นการ swipe → check ว่าทุกคน swipe ครบยัง → หา match
+    // Fix Bug: ต้องรอให้ทุกคน swipe ครบถึงจะสรุปผล
     const finishSwiping = async () => {
         setIsDone(true);
         setIsSubmitting(true);
 
         try {
-            // นับจำนวน participants ในห้อง
+            // นับจำนวนผู้เล่น
             const { data: allParticipants } = await supabase
                 .from('participants')
                 .select('id')
                 .eq('room_id', roomId);
-
             const totalPlayers = allParticipants?.length ?? 1;
+            const targetSwipes = totalPlayers * currentFoodList.length;
 
-            // หาอาหารที่ทุกคน Like
-            // ► นับจำนวน Like แต่ละ food_id จาก swipes ของห้องนี้
-            const { data: swipesData } = await supabase
+            // เช็คว่าทุกคน swipe ครบหรือยัง
+            const { count: totalSwipes } = await supabase
                 .from('swipes')
-                .select('food_id, is_liked')
-                .eq('room_id', roomId)
-                .eq('is_liked', true);
+                .select('*', { count: 'exact', head: true })
+                .eq('room_id', roomId);
 
-            // นับ Like แต่ละ food
-            const likeCounts = {};
-            swipesData?.forEach(({ food_id }) => {
-                likeCounts[food_id] = (likeCounts[food_id] || 0) + 1;
-            });
+            if (totalSwipes >= targetSwipes) {
+                // ทุกคนทำเสร็จแล้ว -> สรุปผล!
+                const { data: swipesData } = await supabase
+                    .from('swipes')
+                    .select('food_id, is_liked')
+                    .eq('room_id', roomId)
+                    .eq('is_liked', true);
 
-            // หาอาหารที่ทุกคน Like (count === totalPlayers)
-            const matchedFoodId = Object.keys(likeCounts).find(
-                (id) => likeCounts[id] >= totalPlayers
-            );
+                const likeCounts = {};
+                swipesData?.forEach(({ food_id }) => {
+                    likeCounts[food_id] = (likeCounts[food_id] || 0) + 1;
+                });
 
-            if (matchedFoodId) {
-                // มี match! อัปเดต room → Realtime จะ trigger ทุกคนไป ResultScreen
+                const sortedFoods = Object.keys(likeCounts).sort((a, b) => likeCounts[b] - likeCounts[a]);
+                let finalMatch = null;
+                
+                // คัดเฉพาะเมนูที่ทุกคน Like
+                const perfectMatches = sortedFoods.filter(id => likeCounts[id] >= totalPlayers);
+                
+                if (perfectMatches.length > 0) {
+                    finalMatch = perfectMatches[0];
+                } else if (sortedFoods.length > 0) {
+                    // ถ้าไม่มีที่ชอบตรงกันทุกคน เอาอันที่คนชอบมากสุด
+                    finalMatch = sortedFoods[0];
+                } else {
+                    // Fix Bug 4: ถ้าไม่มีใครชอบอะไรเลย สุ่มเอา 1 อัน!
+                    finalMatch = currentFoodList[Math.floor(Math.random() * currentFoodList.length)].id;
+                }
+
                 await supabase
                     .from('rooms')
-                    .update({ status: 'done', matched_food_id: matchedFoodId })
+                    .update({ status: 'done', matched_food_id: finalMatch })
                     .eq('id', roomId);
             }
-            // ถ้ายังไม่ match → รอคนอื่น swipe ครบก่อน (Realtime จะ handle เอง)
         } catch (err) {
             console.error('Finish swipe error:', err.message);
         } finally {
@@ -141,7 +166,14 @@ export default function SwipeScreen({ route, navigation }) {
         }
     };
 
-    // ── UI ────────────────────────────────────────────────────────
+    if (currentFoodList.length === 0) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <ActivityIndicator size="large" color={COLORS.primary} />
+            </SafeAreaView>
+        );
+    }
+
     if (isDone) {
         return (
             <SafeAreaView style={styles.container}>
@@ -158,23 +190,29 @@ export default function SwipeScreen({ route, navigation }) {
         );
     }
 
+    const currentFood = currentFoodList[currentIndex];
+
     return (
         <SafeAreaView style={styles.container}>
             {/* Progress bar */}
             <View style={styles.progressContainer}>
                 <View style={styles.progressBg}>
-                    <View style={[styles.progressFill, { width: `${((currentIndex) / foodList.length) * 100}%` }]} />
+                    <View style={[styles.progressFill, { width: `${((currentIndex) / currentFoodList.length) * 100}%` }]} />
                 </View>
-                <Text style={styles.progressText}>{currentIndex + 1} / {foodList.length}</Text>
+                <Text style={styles.progressText}>{currentIndex + 1} / {currentFoodList.length}</Text>
             </View>
 
             {/* Food Card */}
             <Animated.View style={[styles.foodCard, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
-                <Text style={styles.foodEmoji}>{currentFood.emoji}</Text>
+                {currentFood.image_url ? (
+                    <Image source={{ uri: currentFood.image_url }} style={styles.foodImage} />
+                ) : (
+                    <Text style={styles.foodEmoji}>{currentFood.emoji || '🍽️'}</Text>
+                )}
                 <Text style={styles.foodName}>{currentFood.name}</Text>
                 <View style={styles.tagRow}>
-                    <Text style={styles.tag}>{currentFood.category}</Text>
-                    <Text style={styles.priceTag}>฿ {currentFood.price}</Text>
+                    <Text style={styles.tag}>{currentFood.category || 'Custom'}</Text>
+                    {currentFood.price && <Text style={styles.priceTag}>฿ {currentFood.price}</Text>}
                 </View>
             </Animated.View>
 
@@ -191,7 +229,6 @@ export default function SwipeScreen({ route, navigation }) {
                 </TouchableOpacity>
             </View>
 
-            {/* ชื่อผู้เล่น */}
             <Text style={styles.playerLabel}>Playing as: <Text style={{ fontWeight: 'bold' }}>{playerName}</Text></Text>
         </SafeAreaView>
     );
@@ -208,6 +245,7 @@ const styles = StyleSheet.create({
         alignItems: 'center', marginBottom: 40,
         shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 12, elevation: 8,
     },
+    foodImage: { width: 150, height: 150, borderRadius: 20, marginBottom: 15 },
     foodEmoji: { fontSize: 90, marginBottom: 15 },
     foodName: { fontSize: 26, fontWeight: 'bold', color: COLORS.textDark, textAlign: 'center', marginBottom: 15 },
     tagRow: { flexDirection: 'row', gap: 10 },
