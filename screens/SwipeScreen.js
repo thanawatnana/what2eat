@@ -146,8 +146,8 @@ export default function SwipeScreen({ route, navigation }) {
                 let finalMatch = 'no_match'; // ค่า default ถ้าไม่มีใครใจตรงกันเลย
 
                 if (perfectMatches.length > 0) {
-                    // ถ้ามีใจตรงกันหลายเมนู ให้สุ่มเลือก 1 เมนูจากที่ตรงกัน
-                    finalMatch = perfectMatches[Math.floor(Math.random() * perfectMatches.length)];
+                    // ส่งเมนูทั้งหมดที่ใจตรงกันไปเลย (เป็น JSON string array)
+                    finalMatch = JSON.stringify(perfectMatches);
                 }
 
                 await supabase
