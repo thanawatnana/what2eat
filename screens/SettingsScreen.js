@@ -14,17 +14,24 @@ import { supabase } from '../supabase';
 
 const AVATAR_CACHE_KEY = 'avatar_url_';
 
+// 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function SettingsScreen({ navigation }) {
   const { user, logout, updateUser } = useAuth();
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [avatar, setAvatar] = useState(null);
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [uploading, setUploading] = useState(false);
 
   // Task 5: Editable display name
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [isEditingName, setIsEditingName] = useState(false);
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [editName, setEditName] = useState('');
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [savingName, setSavingName] = useState(false);
 
   // โหลด URL รูปจาก Supabase Storage (หรือ cache)
+  // 🔄 useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
   useEffect(() => {
     if (!user) return;
 
@@ -62,10 +69,15 @@ export default function SettingsScreen({ navigation }) {
       setAvatar(url);
       await AsyncStorage.setItem(AVATAR_CACHE_KEY + user.id, url);
 
+      // 💾 [Backend] อัปเดตแก้ไขข้อมูลในฐานข้อมูล (UPDATE)
+
       await supabase.from('users').update({ profile_image_url: url }).eq('id', user.id);
+
+      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
 
       Alert.alert('✅', 'อัปโหลดรูปสำเร็จ!');
     } catch (err) {
+      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
       Alert.alert('Error', err.message);
     } finally {
       setUploading(false);
@@ -92,6 +104,7 @@ export default function SettingsScreen({ navigation }) {
   };
 
   const handleChangePhoto = () => {
+    // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
     Alert.alert('เปลี่ยนรูปโปรไฟล์', 'เลือกวิธีเพิ่มรูป', [
       { text: 'ยกเลิก', style: 'cancel' },
       { text: '📷 ถ่ายรูป', onPress: takePhoto },
@@ -128,8 +141,10 @@ export default function SettingsScreen({ navigation }) {
       // อัปเดต global state โดยไม่ต้อง re-login
       updateUser({ name_account: editName.trim() });
       setIsEditingName(false);
+      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
       Alert.alert('✅', 'เปลี่ยนชื่อสำเร็จ!');
     } catch (err) {
+      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
       Alert.alert('Error', err.message);
     } finally {
       setSavingName(false);
@@ -137,6 +152,7 @@ export default function SettingsScreen({ navigation }) {
   };
 
   const handleLogout = () => {
+    // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
     Alert.alert('ออกจากระบบ', 'คุณต้องการออกจากระบบหรือไม่?', [
       { text: 'ยกเลิก', style: 'cancel' },
       {
@@ -148,12 +164,19 @@ export default function SettingsScreen({ navigation }) {
           if (stackNav) {
             stackNav.reset({ index: 0, routes: [{ name: 'Login' }] });
           } else {
+            // 🧭 คำสั่งเปลี่ยนหน้าจอ
             navigation.navigate('Login');
           }
         },
       },
     ]);
   };
+
+  // 🎨 ==========================================
+
+  // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+
+  // 🎨 ==========================================
 
   return (
     <SafeAreaView style={styles.safe}>

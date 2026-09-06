@@ -4,9 +4,12 @@ import { COLORS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabase';
 
+// 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function FavScreen({ navigation }) {
   const { user } = useAuth();
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [favList, setFavList] = useState([]);
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [loading, setLoading] = useState(true);
 
   const loadFavorites = useCallback(async () => {
@@ -33,6 +36,8 @@ export default function FavScreen({ navigation }) {
     }
     setLoading(false);
   }, [user?.id]);
+
+  // 🔄 useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', loadFavorites);
@@ -66,6 +71,12 @@ export default function FavScreen({ navigation }) {
   );
 
   if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={COLORS.primary} /></View>;
+
+  // 🎨 ==========================================
+
+  // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+
+  // 🎨 ==========================================
 
   return (
     <View style={styles.container}>

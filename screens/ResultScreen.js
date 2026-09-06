@@ -1,3 +1,18 @@
+/*
+* ==========================================
+* 🎉 ไฟล์ ResultScreen.js (หน้าสรุปผลการจับคู่)
+* ==========================================
+* [ไลบรารีที่ใช้]
+* - @supabase/supabase-js : ดึงข้อมูลอาหารที่ชนะจากฐานข้อมูล
+* - react-native (ScrollView, Text, Image) : สร้าง UI แสดงผล
+* 
+* [หลักการทำงาน]
+* 1. รับ ID อาหารที่ชนะมาจากตาราง rooms (รูปแบบ JSON String)
+* 2. ถอดรหัส (JSON.parse) แล้ววิ่งไปดึงข้อมูลชื่อและรูปภาพของอาหารเหล่านั้นจากฐานข้อมูล
+* 3. ถ้าไม่มีเมนูที่ใจตรงกันเลย จะโชว์หน้า No Match (ไม่พบจุดตัด) แต่ถ้ามีตรงกันหลายเมนู 
+*    จะนำมาแสดงแบบเลื่อนดูได้ (ScrollView)
+*/
+
 import React, { useEffect, useRef, useState } from 'react';
 import {
     StyleSheet, Text, View, TouchableOpacity, SafeAreaView, Animated, Image, ScrollView
@@ -6,15 +21,21 @@ import { COLORS } from '../constants/theme';
 import { foodList as fallbackFoodList } from '../data/foods';
 import { supabase } from '../supabase';
 
+// 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function ResultScreen({ route, navigation }) {
     const { matchedFoodId, roomCode, customFoods } = route.params;
 
+    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+
     const [matchedFoods, setMatchedFoods] = useState([]);
+    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [loading, setLoading] = useState(true);
 
     // Pop animation
     const scaleAnim = useRef(new Animated.Value(0)).current;
     const bounceAnim = useRef(new Animated.Value(0)).current;
+
+    // 🔄 useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
 
     useEffect(() => {
         const fetchFoods = async () => {
@@ -83,14 +104,19 @@ export default function ResultScreen({ route, navigation }) {
     }, [matchedFoodId, customFoods]);
 
     const handlePlayAgain = () => {
+        // 🧭 คำสั่งเปลี่ยนหน้าจอ
         navigation.navigate('Party');
     };
 
     const handleGoHome = () => {
+        // 🧭 คำสั่งเปลี่ยนหน้าจอ
         navigation.navigate('MainTabs');
     };
 
     if (loading) {
+        // 🎨 ==========================================
+        // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+        // 🎨 ==========================================
         return (
             <SafeAreaView style={[styles.container, { justifyContent: 'center' }]}>
                 <Text style={{color: COLORS.secondary}}>กำลังโหลดผลลัพธ์...</Text>
@@ -100,6 +126,9 @@ export default function ResultScreen({ route, navigation }) {
 
     // กรณีไม่มี match (ไม่มีอาหารที่ทุกคน Like)
     if (matchedFoods.length === 0) {
+        // 🎨 ==========================================
+        // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+        // 🎨 ==========================================
         return (
             <SafeAreaView style={[styles.container, { justifyContent: 'center' }]}>
                 <View style={styles.card}>
@@ -118,6 +147,12 @@ export default function ResultScreen({ route, navigation }) {
             </SafeAreaView>
         );
     }
+
+    // 🎨 ==========================================
+
+    // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+
+    // 🎨 ==========================================
 
     return (
         <SafeAreaView style={styles.container}>

@@ -1,3 +1,18 @@
+/*
+* ==========================================
+* 🛋️ ไฟล์ LobbyScreen.js (ห้องพักคอย & ระบบ Real-time)
+* ==========================================
+* [ไลบรารีที่ใช้]
+* - @supabase/supabase-js : ใช้ฟีเจอร์ WebSockets (channel.on) เพื่อดักฟังการเปลี่ยนแปลงแบบสดๆ
+* - expo-clipboard : ใช้สำหรับสร้างปุ่มกดเพื่อ "คัดลอกรหัสห้อง"
+* 
+* [หลักการทำงาน]
+* 1. ใช้ Realtime Subscription ดักฟังตาราง rooms 
+* 2. ถ้ามีเพื่อนเข้ามาในห้อง (ข้อมูลคนในห้องเปลี่ยน) หน้าจอจะอัปเดตรายชื่อสดๆ โดยไม่ต้องรีเฟรช
+* 3. เปิดให้พิมพ์เพิ่ม "เมนูกำหนดเอง" สดๆ และส่งต่อให้ทุกคนในห้องเห็นตรงกัน (ผ่าน channel.send)
+* 4. ดักฟังสถานะห้อง ถ้า Host กดเริ่มเกม (status เปลี่ยนเป็น playing) แอปของทุกคนจะเด้งไปหน้า Swipe อัตโนมัติ
+*/
+
 import React, { useState, useEffect, useRef } from 'react';
 import {
     StyleSheet, Text, View, FlatList, TouchableOpacity,
@@ -7,18 +22,24 @@ import * as Clipboard from 'expo-clipboard';
 import { COLORS } from '../constants/theme';
 import { supabase } from '../supabase';
 
+// 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function LobbyScreen({ route, navigation }) {
     const { roomId, roomCode, participantId, playerName, isHost } = route.params;
+    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [participants, setParticipants] = useState([]);
+    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [isStarting, setIsStarting] = useState(false);
     
     // Custom Foods State
+    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [customFoods, setCustomFoods] = useState([]);
+    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [newFoodName, setNewFoodName] = useState('');
     
     const channelRef = useRef(null);
 
     // ── โหลดรายชื่อผู้เล่นและ Realtime subscription ──────────────
+    // 🔄 useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
     useEffect(() => {
         fetchParticipants();
         fetchRoomData();
@@ -97,12 +118,14 @@ export default function LobbyScreen({ route, navigation }) {
 
     const handleStartGame = async () => {
         if (participants.length < 2) {
+            // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
             Alert.alert('⚠️ ผู้เล่นไม่พอ', 'ต้องมีอย่างน้อย 2 คนถึงจะเริ่มได้!');
             return;
         }
         setIsStarting(true);
         const { error } = await supabase.from('rooms').update({ status: 'playing' }).eq('id', roomId);
         if (error) {
+            // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
             Alert.alert('❌ Error', error.message);
             setIsStarting(false);
         }
@@ -110,6 +133,7 @@ export default function LobbyScreen({ route, navigation }) {
 
     const handleCopyCode = async () => {
         await Clipboard.setStringAsync(roomCode);
+        // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
         Alert.alert('📋 คัดลอกแล้ว!', `รหัสห้อง ${roomCode} ถูกคัดลอกแล้ว`);
     };
 
@@ -151,6 +175,12 @@ export default function LobbyScreen({ route, navigation }) {
             {item.id === participantId && <Text style={styles.youBadge}>You</Text>}
         </View>
     );
+
+    // 🎨 ==========================================
+
+    // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+
+    // 🎨 ==========================================
 
     return (
         <SafeAreaView style={styles.container}>

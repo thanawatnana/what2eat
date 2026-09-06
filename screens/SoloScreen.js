@@ -1,3 +1,18 @@
+/*
+* ==========================================
+* 📸 ไฟล์ SoloScreen.js (หน้าเพิ่มเมนูส่วนตัว & จัดการรูปภาพ)
+* ==========================================
+* [ไลบรารีที่ใช้]
+* - expo-image-picker : ขอสิทธิ์เข้าถึงคลังรูปภาพและกล้องของมือถือ
+* - base64-arraybuffer : พระเอกของหน้านี้! ใช้แปลงไฟล์รูปเป็น Base64 String (ช่วยแก้อัปโหลดไฟล์รูปเสียบน Expo)
+* - @supabase/supabase-js : ใช้ฟีเจอร์ Storage เพื่ออัปโหลดไฟล์รูปภาพไปเก็บบนคลาวด์
+* 
+* [หลักการทำงาน]
+* 1. ให้ผู้ใช้พิมพ์ชื่ออาหาร เลือกหมวดหมู่ และเลือกรูปภาพ
+* 2. ฟังก์ชัน uploadFoodImage จะแปลงรูปเป็น Base64 (decode) และส่งไปที่ Supabase Storage
+* 3. นำ URL ของรูปที่ได้ มาบันทึกลงตาราง user_foods เพื่อให้ผู้ใช้กดสุ่มเมนูส่วนตัวของตัวเองได้
+*/
+
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
 import { useCallback, useEffect, useState, useRef } from 'react';
@@ -32,29 +47,45 @@ const FILTER_CATEGORIES = [
 // Task 3: หมวดหมู่อาหารสำเร็จรูป (ตัวเลือก dropdown)
 const CATEGORIES = ['Thai', 'Japanese', 'Western', 'Healthy', 'Fast Food', 'Party', 'อื่นๆ'];
 
+// 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function SoloScreen({ navigation }) {
   const { user } = useAuth();
 
   // ── State หลัก ──────────────────────────────────────────────────────────
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [allFoods, setAllFoods] = useState([]);
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [currentFood, setCurrentFood] = useState(null);
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [isFlipped, setIsFlipped] = useState(false);
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [isFlipping, setIsFlipping] = useState(false);
   const flipAnim = useRef(new Animated.Value(0)).current;
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [loadingFoods, setLoadingFoods] = useState(true);
 
   // Bug 4 fix: Multi-select category filter (array instead of single string)
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [selectedCategories, setSelectedCategories] = useState([]);
 
   // ── Modal เพิ่มเมนูส่วนตัว (Task 3) ─────────────────────────────────────
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [modalVisible, setModalVisible] = useState(false);
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [newName, setNewName] = useState('');
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [newCategory, setNewCategory] = useState('Thai');
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [newCustomCategory, setNewCustomCategory] = useState('');
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [newPrice, setNewPrice] = useState('');
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [newImageUri, setNewImageUri] = useState(null);
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [newImageBase64, setNewImageBase64] = useState(null);  // URI รูปที่เลือก (local)
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [savingFood, setSavingFood] = useState(false);
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
 
   // ── โหลดเมนูทั้งหมด (ระบบ + ส่วนตัว) ─────────────────────────────────────
@@ -72,11 +103,14 @@ export default function SoloScreen({ navigation }) {
       ];
       setAllFoods(combined);
     } catch (err) {
+      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
       Alert.alert('Error', err.message);
     } finally {
       setLoadingFoods(false);
     }
   }, [user?.id]);
+
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
 
   const [favFoods, setFavFoods] = useState([]);
 
@@ -85,6 +119,8 @@ export default function SoloScreen({ navigation }) {
     const { data } = await supabase.from('favorites').select('food_name').eq('user_id', user.id);
     if (data) setFavFoods(data.map(f => f.food_name));
   }, [user?.id]);
+
+  // 🔄 useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
 
   useEffect(() => { 
     loadFoods(); 
@@ -144,6 +180,7 @@ export default function SoloScreen({ navigation }) {
       
       // ถ้าเป็นการพลิกมาโชว์อาหาร ให้บันทึกประวัติ
       if (!isFlipped && selected) {
+        // 💾 [Backend] เพิ่มข้อมูลใหม่ลงในฐานข้อมูล (INSERT)
         await supabase.from('history').insert({
           user_id: user.id,
           food_name: selected.name,
@@ -178,6 +215,7 @@ export default function SoloScreen({ navigation }) {
       if (error.code === '23505') Alert.alert('❤️', 'มีเมนูนี้ในรายการโปรดแล้วจ้า!');
       else Alert.alert('Error', error.message);
     } else {
+      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
       Alert.alert('❤️', 'บันทึกเมนูโปรดสำเร็จ!');
       setFavFoods(prev => [...prev, currentFood.name]);
     }
@@ -187,6 +225,7 @@ export default function SoloScreen({ navigation }) {
   const pickFoodImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
+      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
       Alert.alert('ไม่ได้รับสิทธิ์', 'กรุณาอนุญาตให้เข้าถึงรูปภาพ');
       return;
     }
@@ -247,11 +286,14 @@ export default function SoloScreen({ navigation }) {
 
       if (error) { Alert.alert('Error', error.message); return; }
 
+      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
+
       Alert.alert('✅', 'เพิ่มเมนูสำเร็จ!');
       resetForm();
       setModalVisible(false);
       loadFoods();
     } catch (err) {
+      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
       Alert.alert('Error', err.message);
     } finally {
       setSavingFood(false);
@@ -284,6 +326,9 @@ export default function SoloScreen({ navigation }) {
           const isActive = cat.value === 'All'
             ? selectedCategories.length === 0
             : selectedCategories.includes(cat.value);
+          // 🎨 ==========================================
+          // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+          // 🎨 ==========================================
           return (
             <TouchableOpacity
               key={cat.value}
@@ -340,6 +385,9 @@ export default function SoloScreen({ navigation }) {
                   )}
                   {(() => {
                     const isFav = favFoods.includes(currentFood.name);
+                    // 🎨 ==========================================
+                    // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+                    // 🎨 ==========================================
                     return (
                       <TouchableOpacity 
                         style={[styles.favBtn, isFav && { backgroundColor: '#F0F0F0', borderColor: '#CCC' }]} 

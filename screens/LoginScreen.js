@@ -14,17 +14,24 @@ import bcrypt from '../utils/bcryptHelper'; // Task 2: ใช้ helper ที�
 // ─── Guest user ID (predefined record in DB) ─────────────────────────────────
 const GUEST_USER_ID = '00000000-0000-4000-8000-000000000000';
 
+// 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function LoginScreen({ navigation }) {
     const { login } = useAuth();
 
+    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+
     const [username, setUsername] = useState('');
+    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [password, setPassword] = useState('');
+    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [loading, setLoading] = useState(false);
 
     // Task 1: Toggle password visibility
+    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
     // ─── Per-field & general error states ───────────────────────────────────
+    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [errors, setErrors] = useState({ username: '', password: '', general: '' });
 
     const clearErrors = () => setErrors({ username: '', password: '', general: '' });
@@ -118,6 +125,9 @@ export default function LoginScreen({ navigation }) {
     };
 
     // ─── UI ─────────────────────────────────────────────────────────────────
+    // 🎨 ==========================================
+    // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+    // 🎨 ==========================================
     return (
         <SafeAreaView style={styles.safe}>
             <KeyboardAvoidingView

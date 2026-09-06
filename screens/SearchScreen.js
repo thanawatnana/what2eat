@@ -7,11 +7,16 @@ import { COLORS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabase';
 
+// 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function SearchScreen({ navigation }) {
   const { user } = useAuth();
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [query, setQuery] = useState('');
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [results, setResults] = useState([]);
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [loading, setLoading] = useState(false);
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [searched, setSearched] = useState(false);
 
   const doSearch = useCallback(async (text) => {
@@ -33,6 +38,8 @@ export default function SearchScreen({ navigation }) {
     } finally { setLoading(false); }
   }, [user]);
 
+  // 🔄 useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
+
   useEffect(() => {
     const t = setTimeout(() => doSearch(query), 400);
     return () => clearTimeout(t);
@@ -47,6 +54,12 @@ export default function SearchScreen({ navigation }) {
       </View>
     </View>
   );
+
+  // 🎨 ==========================================
+
+  // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+
+  // 🎨 ==========================================
 
   return (
     <SafeAreaView style={styles.safe}>

@@ -1,3 +1,20 @@
+/*
+* ==========================================
+* 💖 ไฟล์ SwipeScreen.js (หน้าปัดการ์ด & อัลกอริทึมจับคู่)
+* ==========================================
+* [ไลบรารีที่ใช้]
+* - react-native-deck-swiper : ไลบรารีสำหรับสร้างการ์ดและแอนิเมชันปัดซ้าย/ขวา เหมือนแอป Tinder
+* - @supabase/supabase-js : เชื่อมฐานข้อมูลดึงรายการอาหารและอัปเดตผลโหวต
+* 
+* [หลักการทำงาน]
+* 1. ดึงเมนูอาหารทั้งหมดมาแสดงเป็นการ์ด 
+* 2. เมื่อผู้ใช้ปัดขวา (Like) โค้ดจะนำ ID อาหารนั้นไปเก็บไว้ใน Array (myLiked)
+* 3. เมื่อปัดครบทุกคน ระบบจะทำงานที่ฟังก์ชัน finishSwiping() เพื่อ "หาจุดตัด (Intersection)" 
+*    ของอาหารที่ทุกคนกด Like เหมือนกัน 100% (Unanimous Vote)
+* 4. แปลงรหัสเมนูที่ตรงกันเป็นข้อความ (JSON.stringify) ส่งขึ้นไปอัปเดตในตาราง rooms 
+*    เพื่อให้หน้า Result นำไปแสดงผลต่อ
+*/
+
 import React, { useState, useEffect, useRef } from 'react';
 import {
     StyleSheet, Text, View, TouchableOpacity, SafeAreaView,
@@ -7,12 +24,18 @@ import { COLORS } from '../constants/theme';
 import { foodList as fallbackFoodList } from '../data/foods';
 import { supabase } from '../supabase';
 
+// 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function SwipeScreen({ route, navigation }) {
     const { roomId, roomCode, participantId, playerName, customFoods } = route.params;
 
+    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+
     const [currentFoodList, setCurrentFoodList] = useState([]);
+    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [currentIndex, setCurrentIndex] = useState(0);
+    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [isDone, setIsDone] = useState(false);
+    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [isSubmitting, setIsSubmitting] = useState(false);
     const channelRef = useRef(null);
 
@@ -21,6 +44,7 @@ export default function SwipeScreen({ route, navigation }) {
     const scaleAnim = useRef(new Animated.Value(1)).current;
 
     // 1. โหลดข้อมูลเมนูอาหาร
+    // 🔄 useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
     useEffect(() => {
         if (customFoods && customFoods.length > 0) {
             setCurrentFoodList(customFoods);
@@ -36,6 +60,7 @@ export default function SwipeScreen({ route, navigation }) {
     }, [customFoods]);
 
     // 2. Subscribe Realtime — รอ matched_food_id เพื่อไป ResultScreen
+    // 🔄 useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
     useEffect(() => {
         channelRef.current = supabase
             .channel(`result-${roomId}`)
@@ -163,6 +188,9 @@ export default function SwipeScreen({ route, navigation }) {
     };
 
     if (currentFoodList.length === 0) {
+        // 🎨 ==========================================
+        // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+        // 🎨 ==========================================
         return (
             <SafeAreaView style={styles.container}>
                 <ActivityIndicator size="large" color={COLORS.primary} />
@@ -171,6 +199,9 @@ export default function SwipeScreen({ route, navigation }) {
     }
 
     if (isDone) {
+        // 🎨 ==========================================
+        // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+        // 🎨 ==========================================
         return (
             <SafeAreaView style={styles.container}>
                 <View style={styles.doneCard}>
@@ -187,6 +218,12 @@ export default function SwipeScreen({ route, navigation }) {
     }
 
     const currentFood = currentFoodList[currentIndex];
+
+    // 🎨 ==========================================
+
+    // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+
+    // 🎨 ==========================================
 
     return (
         <SafeAreaView style={styles.container}>

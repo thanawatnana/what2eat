@@ -17,17 +17,25 @@ import bcrypt from '../utils/bcryptHelper'; // Task 2: ใช้ helper ที�
 const EMAIL_REGEX = /^[^\s@]+@gmail\.com$/i;
 
 
+// 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function RegisterScreen({ navigation }) {
+    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [nameAccount, setNameAccount] = useState('');
+    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [username, setUsername] = useState('');
+    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [email, setEmail] = useState('');
+    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [password, setPassword] = useState('');
+    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [loading, setLoading] = useState(false);
 
     // Task 1: Toggle password visibility
+    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
     // ─── Per-field error states ──────────────────────────────────────────────
+    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [errors, setErrors] = useState({
         nameAccount: '',
         username: '',
@@ -115,6 +123,7 @@ export default function RegisterScreen({ navigation }) {
             if (insertError) throw new Error(insertError.message);
 
             // 5. Success → navigate to Login immediately
+            // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
             Alert.alert('สมัครสมาชิกสำเร็จ! 🎉', 'กรุณาเข้าสู่ระบบ');
             navigation.replace('Login');
 
@@ -124,6 +133,12 @@ export default function RegisterScreen({ navigation }) {
             setLoading(false);
         }
     };
+
+    // 🎨 ==========================================
+
+    // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+
+    // 🎨 ==========================================
 
     return (
         <SafeAreaView style={styles.safe}>

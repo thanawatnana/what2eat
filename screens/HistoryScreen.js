@@ -4,9 +4,12 @@ import { COLORS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabase';
 
+// 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function HistoryScreen({ navigation }) {
   const { user } = useAuth();
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [historyList, setHistoryList] = useState([]);
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [loading, setLoading] = useState(true);
 
   const loadHistory = useCallback(async () => {
@@ -21,6 +24,8 @@ export default function HistoryScreen({ navigation }) {
     setLoading(false);
   }, [user?.id]);
 
+  // 🔄 useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
+
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', loadHistory);
     return unsubscribe;
@@ -30,6 +35,7 @@ export default function HistoryScreen({ navigation }) {
   if (!user) return null;
 
   const clearHistory = () => {
+    // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
     Alert.alert('ล้างประวัติ', 'ต้องการซ่อนประวัติทั้งหมดออกจากหน้าจอหรือไม่?\n(ข้อมูลยังคงอยู่ในระบบ)', [
       { text: 'ยกเลิก', style: 'cancel' },
       {
@@ -43,6 +49,9 @@ export default function HistoryScreen({ navigation }) {
     const dateObj = new Date(item.created_at);
     const dateStr = dateObj.toLocaleDateString('th-TH');
     const timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    // 🎨 ==========================================
+    // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+    // 🎨 ==========================================
     return (
       <View style={styles.historyCard}>
         {item.image_url ? (
@@ -60,6 +69,12 @@ export default function HistoryScreen({ navigation }) {
   };
 
   if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={COLORS.primary} /></View>;
+
+  // 🎨 ==========================================
+
+  // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+
+  // 🎨 ==========================================
 
   return (
     <View style={styles.container}>

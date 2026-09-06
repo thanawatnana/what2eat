@@ -35,15 +35,23 @@ const CATEGORIES = [
   { emoji: '🍲', label: 'ปาร์ตี้',  value: 'Party' },
 ];
 
+// 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function HomeScreen({ navigation }) {
   const { user } = useAuth();
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [foods, setFoods] = useState([]);
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [pickedFood, setPickedFood] = useState(null);
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [isFlipped, setIsFlipped] = useState(false);
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [isFlipping, setIsFlipping] = useState(false);
   const flipAnim = useRef(new Animated.Value(0)).current;
 
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+
   const [favFoods, setFavFoods] = useState([]);
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [avatar, setAvatar] = useState(null);
 
   const loadFoods = async () => {
@@ -68,6 +76,8 @@ export default function HomeScreen({ navigation }) {
       if (data?.publicUrl) setAvatar(data.publicUrl + '?t=' + Date.now());
     }
   };
+
+  // 🔄 useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
 
   useEffect(() => { 
     loadFoods();
@@ -110,6 +120,7 @@ export default function HomeScreen({ navigation }) {
 
       if (!isFlipped && picked && user) {
         // บันทึกลง history
+        // 💾 [Backend] เพิ่มข้อมูลใหม่ลงในฐานข้อมูล (INSERT)
         await supabase.from('history').insert({
           user_id: user.id,
           food_name: picked.name,
@@ -136,6 +147,7 @@ export default function HomeScreen({ navigation }) {
       if (error.code === '23505') Alert.alert('❤️', 'มีเมนูนี้ในรายการโปรดแล้วจ้า!');
       else Alert.alert('Error', error.message);
     } else {
+      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
       Alert.alert('❤️', 'บันทึกเมนูโปรดสำเร็จ!');
       setFavFoods(prev => [...prev, pickedFood.name]);
     }
@@ -147,6 +159,12 @@ export default function HomeScreen({ navigation }) {
   const backOpacity  = flipAnim.interpolate({ inputRange: [89, 90], outputRange: [0, 1] });
 
   const cardColor = pickedFood ? WHEEL_ITEMS[foods.indexOf(pickedFood) % 8]?.color ?? COLORS.primary : COLORS.primary;
+
+  // 🎨 ==========================================
+
+  // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+
+  // 🎨 ==========================================
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -222,6 +240,9 @@ export default function HomeScreen({ navigation }) {
                   
                   {(() => {
                     const isFav = favFoods.includes(pickedFood.name);
+                    // 🎨 ==========================================
+                    // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+                    // 🎨 ==========================================
                     return (
                       <TouchableOpacity 
                         style={[styles.favBtn, isFav && { backgroundColor: '#F0F0F0', borderColor: '#CCC' }]} 

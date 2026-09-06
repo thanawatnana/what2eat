@@ -6,6 +6,7 @@ const AuthContext = createContext(null);
 // ─── Provider ───────────────────────────────────────────────────────────────
 export function AuthProvider({ children }) {
     // user object: { id, name_account, username, is_guest }
+    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [user, setUser] = useState(null);
 
     const login = (userData) => {
@@ -25,6 +26,12 @@ export function AuthProvider({ children }) {
     const updateUser = (updates) => {
         setUser(prev => prev ? { ...prev, ...updates } : prev);
     };
+
+    // 🎨 ==========================================
+
+    // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+
+    // 🎨 ==========================================
 
     return (
         <AuthContext.Provider value={{ user, login, logout, updateUser }}>

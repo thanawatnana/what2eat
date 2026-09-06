@@ -1,3 +1,18 @@
+/*
+* ==========================================
+* 📱 ไฟล์ App.js (หัวใจหลักของแอปพลิเคชัน)
+* ==========================================
+* [ไลบรารีที่ใช้]
+* - @react-navigation/native : ไลบรารีหลักสำหรับจัดการระบบนำทาง (เปลี่ยนหน้าไปมา)
+* - @react-navigation/bottom-tabs : ใช้สร้างแถบเมนูด้านล่าง (Home, Search, Solo, Fav, Account)
+* - @react-navigation/native-stack : ใช้สร้างหน้าจอแบบซ้อนทับ (Stack) เพื่อให้กดปุ่ม Back ย้อนกลับได้
+* 
+* [หลักการทำงาน]
+* 1. ตรวจสอบว่าผู้ใช้ล็อกอินหรือยัง (ผ่าน <AuthProvider>) 
+* 2. รวมหน้าจอทั้งหมดมาผูกเข้าด้วยกัน (Router) 
+* 3. กำหนดรูปแบบ Header ของแต่ละหน้า (เช่น ซ่อน Header บางหน้า หรือเพิ่มปุ่มย้อนกลับ)
+*/
+
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -24,6 +39,9 @@ const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 function CenterTabButton({ children, onPress }) {
+  // 🎨 ==========================================
+  // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+  // 🎨 ==========================================
   return (
     <TouchableOpacity style={styles.centerBtn} onPress={onPress} activeOpacity={0.85}>
       <View style={styles.centerBtnInner}>
@@ -34,6 +52,9 @@ function CenterTabButton({ children, onPress }) {
 }
 
 function MainTabs() {
+  // 🎨 ==========================================
+  // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+  // 🎨 ==========================================
   return (
     <Tab.Navigator
       screenOptions={{
@@ -122,7 +143,11 @@ function MainTabs() {
   );
 }
 
+// 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function App() {
+  // 🎨 ==========================================
+  // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+  // 🎨 ==========================================
   return (
     <AuthProvider>
       <NavigationContainer>

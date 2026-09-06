@@ -20,31 +20,52 @@ import { supabase } from '../supabase';
 // Task 4 + Task 3: Category dropdown options
 const CATEGORIES = ['Thai', 'Japanese', 'Western', 'Healthy', 'Fast Food', 'Party', 'อื่นๆ'];
 
+// 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function AllFoodsScreen({ navigation }) {
   const { user } = useAuth();
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [foods, setFoods] = useState([]);
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [loading, setLoading] = useState(true);
 
   // ── Modal: Add Food ─────────────────────────────────────────────────────
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [addModalVisible, setAddModalVisible] = useState(false);
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [newName, setNewName] = useState('');
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [newCategory, setNewCategory] = useState('Thai');
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [newCustomCategory, setNewCustomCategory] = useState('');
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [newPrice, setNewPrice] = useState('');
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [newImageUri, setNewImageUri] = useState(null);
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [savingFood, setSavingFood] = useState(false);
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [addCategoryOpen, setAddCategoryOpen] = useState(false);
 
   // ── Modal: Edit Food ─────────────────────────────────────────────────────
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [editModalVisible, setEditModalVisible] = useState(false);
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [editingFood, setEditingFood] = useState(null);
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [editName, setEditName] = useState('');
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [editCategory, setEditCategory] = useState('Thai');
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [editCustomCategory, setEditCustomCategory] = useState('');
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [editPrice, setEditPrice] = useState('');
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [editImageUri, setEditImageUri] = useState(null);
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [editImageBase64, setEditImageBase64] = useState(null);
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [updatingFood, setUpdatingFood] = useState(false);
+  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [editCategoryOpen, setEditCategoryOpen] = useState(false);
 
   // ── โหลดเมนู ────────────────────────────────────────────────────────────
@@ -63,6 +84,8 @@ export default function AllFoodsScreen({ navigation }) {
     setLoading(false);
   }, [user?.id]);
 
+  // 🔄 useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
+
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', loadFoods);
     return unsubscribe;
@@ -74,6 +97,7 @@ export default function AllFoodsScreen({ navigation }) {
   // ── ลบเมนู ──────────────────────────────────────────────────────────────
   const deleteUserFood = (item) => {
     if (item.source === 'system') { Alert.alert('❌', 'ไม่สามารถลบเมนูของระบบได้'); return; }
+    // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
     Alert.alert('ลบเมนู', `ต้องการลบ "${item.name}" หรือไม่?`, [
       { text: 'ยกเลิก', style: 'cancel' },
       {
@@ -132,11 +156,13 @@ export default function AllFoodsScreen({ navigation }) {
       });
 
       if (error) { Alert.alert('Error', error.message); return; }
+      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
       Alert.alert('✅', 'เพิ่มเมนูสำเร็จ!');
       resetAddForm();
       setAddModalVisible(false);
       loadFoods();
     } catch (err) {
+      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
       Alert.alert('Error', err.message);
     } finally {
       setSavingFood(false);
@@ -188,6 +214,7 @@ export default function AllFoodsScreen({ navigation }) {
         .select(); // ทำให้รู้ว่า update กี่ rows จริง
 
       if (error) {
+        // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
         Alert.alert('❌ Error', error.message);
         return;
       }
@@ -197,10 +224,13 @@ export default function AllFoodsScreen({ navigation }) {
         f.id === editingFood.id ? { ...f, ...updatedData } : f
       ));
 
+      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
+
       Alert.alert('✅', 'แก้ไขเมนูสำเร็จ!');
       setEditModalVisible(false);
       loadFoods();
     } catch (err) {
+      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
       Alert.alert('❌ Error', err.message);
     } finally {
       setUpdatingFood(false);
@@ -242,6 +272,12 @@ export default function AllFoodsScreen({ navigation }) {
   );
 
   if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={COLORS.primary} /></View>;
+
+  // 🎨 ==========================================
+
+  // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+
+  // 🎨 ==========================================
 
   return (
     <View style={styles.container}>
