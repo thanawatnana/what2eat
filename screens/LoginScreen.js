@@ -136,7 +136,7 @@ export default function LoginScreen({ navigation }) {
             >
                 <View style={styles.container}>
                     {/* Header */}
-                    <Text style={styles.logo}>What2Eat</Text>
+                    <Text style={styles.logo}>Joykin</Text>
                     <Text style={styles.title}>เข้าสู่ระบบ</Text>
                     <Text style={styles.subtitle}>ยินดีต้อนรับกลับมา 👋</Text>
 

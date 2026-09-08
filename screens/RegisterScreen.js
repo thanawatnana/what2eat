@@ -153,7 +153,7 @@ export default function RegisterScreen({ navigation }) {
                     </TouchableOpacity>
 
                     {/* Header */}
-                    <Text style={styles.logo}>What2Eat</Text>
+                    <Text style={styles.logo}>Joykin</Text>
                     <Text style={styles.title}>สมัครสมาชิก</Text>
                     <Text style={styles.subtitle}>สร้างบัญชีของคุณเพื่อเริ่มต้น</Text>
 

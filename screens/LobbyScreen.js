@@ -138,7 +138,7 @@ export default function LobbyScreen({ route, navigation }) {
     };
 
     const handleShare = () => {
-        Share.share({ message: `มาเล่น What2Eat กันเถอะ! 🍴\nรหัสห้อง: ${roomCode}` });
+        Share.share({ message: `มาเล่น Joykin กันเถอะ! 🍴\nรหัสห้อง: ${roomCode}` });
     };
 
     const handleAddCustomFood = () => {
