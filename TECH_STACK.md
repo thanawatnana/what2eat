@@ -1,4 +1,4 @@
-# 🛠️ Tech Stack — What2Eat
+# 🛠️ Tech Stack — Joykin
 
 ## 💻 Development Environment
 
