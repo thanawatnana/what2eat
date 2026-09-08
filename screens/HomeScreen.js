@@ -175,7 +175,7 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.header}>
           <View style={styles.logoRow}>
             <Text style={{ fontSize: 22 }}>🍴</Text>
-            <Text style={styles.logoText}>What<Text style={styles.logo2}>2</Text>Eat</Text>
+            <Text style={styles.logoText}>Joykin</Text>
           </View>
           <View style={styles.headerRight}>
             <TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('Search')}>
