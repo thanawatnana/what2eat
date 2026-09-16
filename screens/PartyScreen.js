@@ -152,7 +152,24 @@ export default function PartyScreen({ navigation }) {
             onPress={handleCreateRoom}
             disabled={isLoading}
           >
-            <Text style={styles.partyButtonText}>✨ Create New Room</Text>
+            <Text style={styles.partyButtonText}>✨ Create Standard Room (Max 4)</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.partyButton, { backgroundColor: '#FFD700', marginTop: 10 }]}
+            onPress={() => {
+              Alert.alert(
+                '👑 Joykin Premium Required',
+                'ฟีเจอร์นี้สำหรับผู้ใช้ Premium เท่านั้น!\n\nอัปเกรดเพื่อปลดล็อก:\n- โหมดปาร์ตี้กลุ่มใหญ่ (สูงสุด 20 คน)\n- ไม่จำกัดจำนวนเมนูส่วนตัว\n- ไม่มีโฆษณาคั่น\n\nในราคาเพียง 59 บาท/เดือน',
+                [
+                  { text: 'ภายหลัง', style: 'cancel' },
+                  { text: 'อัปเกรดเลย', onPress: () => console.log('Mock Payment Triggered') }
+                ]
+              );
+            }}
+            disabled={isLoading}
+          >
+            <Text style={[styles.partyButtonText, { color: '#8B6508' }]}>👑 Create Big Party (Max 20)</Text>
           </TouchableOpacity>
 
           <Text style={styles.orText}>- OR -</Text>
