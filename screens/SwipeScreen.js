@@ -171,8 +171,11 @@ export default function SwipeScreen({ route, navigation }) {
                 let finalMatch = 'no_match'; // ค่า default ถ้าไม่มีใครใจตรงกันเลย
 
                 if (perfectMatches.length > 0) {
-                    // ส่งเมนูทั้งหมดที่ใจตรงกันไปเลย (เป็น JSON string array)
-                    finalMatch = JSON.stringify(perfectMatches);
+                    // 💡 [UPDATE] ระบบ "แอปฟันธงให้" (Absolute Randomizer)
+                    // ถ้ามีจุดตัดหลายอัน ระบบจะสุ่มเลือกมาแค่ 1 อันเป็นผู้ชนะเด็ดขาด!
+                    const randomIndex = Math.floor(Math.random() * perfectMatches.length);
+                    const absoluteWinner = perfectMatches[randomIndex];
+                    finalMatch = JSON.stringify([absoluteWinner]);
                 }
 
                 await supabase
