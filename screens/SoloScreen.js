@@ -33,6 +33,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabase';
+import * as Location from 'expo-location';
 
 // Task 4: หมวดหมู่สำหรับ Filter Chips
 const FILTER_CATEGORIES = [
@@ -79,6 +80,9 @@ export default function SoloScreen({ navigation }) {
   const [newCustomCategory, setNewCustomCategory] = useState('');
   // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [newPrice, setNewPrice] = useState('');
+  const [newRestaurantName, setNewRestaurantName] = useState('');
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false);
   // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [newImageUri, setNewImageUri] = useState(null);
   // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
@@ -242,6 +246,20 @@ export default function SoloScreen({ navigation }) {
   const uploadFoodImage = (base64) => uploadImage({ base64, userId: user.id });
 
   // ── Task 3: บันทึกเมนูส่วนตัว (ไม่มี emoji แล้ว มี image_url แทน) ──
+    const handleGetLocation = async () => {
+    setIsFetchingLocation(true);
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission to access location was denied');
+      setIsFetchingLocation(false);
+      return;
+    }
+    let loc = await Location.getCurrentPositionAsync({});
+    setCurrentLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+    setIsFetchingLocation(false);
+    Alert.alert('✅ สำเร็จ', 'ปักหมุดตำแหน่งปัจจุบันเรียบร้อยแล้ว');
+  };
+
   const handleAddFood = async () => {
     if (!newName.trim()) { Alert.alert('⚠️', 'กรุณากรอกชื่อเมนู'); return; }
     if (savingFood) return;
@@ -266,6 +284,9 @@ export default function SoloScreen({ navigation }) {
         image_url: imageUrl,
         category: finalCategory,
         price: newPrice.trim() || '-',
+          restaurant_name: newRestaurantName.trim() || null,
+          lat: currentLocation ? currentLocation.lat : null,
+          lng: currentLocation ? currentLocation.lng : null,
       });
 
       if (error) throw error;
@@ -290,6 +311,8 @@ export default function SoloScreen({ navigation }) {
     setNewCategory('Thai');
     setNewCustomCategory('');
     setNewPrice('');
+    setNewRestaurantName('');
+    setCurrentLocation(null);
     setNewImageUri(null); setNewImageBase64(null);
     setCategoryPickerOpen(false);
   };
@@ -479,7 +502,24 @@ export default function SoloScreen({ navigation }) {
               )}
 
               {/* ── ราคา ── */}
-              <Text style={styles.modalLabel}>ราคา (ไม่บังคับ)</Text>
+                            {/* 📍 ปักหมุดร้านอาหาร */}
+              <Text style={styles.modalLabel}>ชื่อร้านอาหาร (ไม่บังคับ)</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder="เช่น ข้าวมันไก่เจ๊จู"
+                placeholderTextColor="#aaa"
+                value={newRestaurantName}
+                onChangeText={setNewRestaurantName}
+              />
+              <TouchableOpacity 
+                style={[styles.modalInput, { backgroundColor: currentLocation ? '#e6ffe6' : '#FAFAFA', borderColor: currentLocation ? '#4CAF50' : '#ddd', marginTop: 8, alignItems: 'center' }]} 
+                onPress={handleGetLocation}
+                disabled={isFetchingLocation}
+              >
+                {isFetchingLocation ? <ActivityIndicator color="#4CAF50" /> : <Text style={{ color: currentLocation ? '#4CAF50' : '#666', fontWeight: 'bold' }}>{currentLocation ? '📍 ปักหมุดแล้ว' : '📍 ดึงพิกัด GPS ปัจจุบัน'}</Text>}
+              </TouchableOpacity>
+
+                <Text style={styles.modalLabel}>ราคา (ไม่บังคับ)</Text>
               <TextInput
                 style={styles.modalInput}
                 placeholder="เช่น 50-80"
