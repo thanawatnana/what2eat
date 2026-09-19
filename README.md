@@ -4,7 +4,9 @@
 
 ## เปิดบนมือถือด้วย Expo Go
 
-ต้องติดตั้ง Node.js และ Expo Go บนมือถือ แล้วให้คอมพิวเตอร์กับมือถืออยู่เครือข่ายเดียวกัน
+ต้องติดตั้ง Node.js และ Expo Go บนมือถือ แล้วเลือกวิธีเชื่อมต่อตามตำแหน่งของผู้ทดสอบ
+
+### ทดสอบบน Wi-Fi เดียวกัน (เร็วกว่า)
 
 ```powershell
 npm install
@@ -12,6 +14,16 @@ npx expo start
 ```
 
 สแกน QR ที่แสดงใน terminal ด้วย Expo Go หาก LAN เชื่อมไม่ได้ ให้ลอง `npx expo start --tunnel`
+
+### ให้ผู้ทดสอบเชื่อมจากคนละเครือข่าย
+
+```powershell
+npx expo start --tunnel
+```
+
+ส่ง QR ที่แสดงใน terminal ให้ผู้ทดสอบสแกนด้วย Expo Go คอมพิวเตอร์ที่รัน Metro ต้องเปิดอยู่และเชื่อมอินเทอร์เน็ตตลอดการทดสอบ โดย tunnel จะช้ากว่า LAN เล็กน้อยและ URL จะหยุดทำงานเมื่อปิดคำสั่ง
+
+Supabase Auth ต้องอนุญาต callback ของ Expo tunnel (`exp://*.exp.direct/**`) และ callback ของแอปจริง (`joykin://auth/callback`) ใน Authentication > URL Configuration ก่อนทดสอบลิงก์ยืนยันอีเมล
 
 ## ตรวจสอบก่อนใช้งาน
 
