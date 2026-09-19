@@ -28,7 +28,13 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Joykin ใช้ตำแหน่งเพื่อปักหมุดร้านของเมนูที่คุณบันทึกเท่านั้น"
+        }
+      ]
     ]
   }
 }

@@ -5,6 +5,21 @@ grant usage on schema joykin_private to authenticated, service_role;
 
 alter table public.users alter column password_hash drop not null;
 alter table public.users alter column email drop not null;
+alter table public.user_foods add column if not exists restaurant_name text;
+alter table public.user_foods add column if not exists lat double precision;
+alter table public.user_foods add column if not exists lng double precision;
+do $$ begin
+  if not exists(select 1 from pg_constraint where conname='user_foods_location_valid') then
+    alter table public.user_foods add constraint user_foods_location_valid check (
+      (lat is null and lng is null) or (lat between -90 and 90 and lng between -180 and 180)
+    );
+  end if;
+  if not exists(select 1 from pg_constraint where conname='user_foods_restaurant_name_length') then
+    alter table public.user_foods add constraint user_foods_restaurant_name_length check (
+      restaurant_name is null or length(restaurant_name) between 1 and 200
+    );
+  end if;
+end $$;
 create unique index if not exists users_username_normalized on public.users (lower(username));
 create unique index if not exists users_email_normalized on public.users (lower(email)) where email is not null;
 

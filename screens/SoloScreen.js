@@ -246,18 +246,23 @@ export default function SoloScreen({ navigation }) {
   const uploadFoodImage = (base64) => uploadImage({ base64, userId: user.id });
 
   // ── Task 3: บันทึกเมนูส่วนตัว (ไม่มี emoji แล้ว มี image_url แทน) ──
-    const handleGetLocation = async () => {
+  const handleGetLocation = async () => {
+    if (isFetchingLocation) return;
     setIsFetchingLocation(true);
-    let { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission to access location was denied');
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('ไม่ได้รับสิทธิ์ตำแหน่ง', 'คุณยังเพิ่มเมนูได้โดยไม่ต้องปักหมุด');
+        return;
+      }
+      const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      setCurrentLocation({ lat: location.coords.latitude, lng: location.coords.longitude });
+      Alert.alert('✅ สำเร็จ', 'ปักหมุดตำแหน่งปัจจุบันเรียบร้อยแล้ว');
+    } catch {
+      Alert.alert('ดึงตำแหน่งไม่สำเร็จ', 'กรุณาเปิด GPS แล้วลองอีกครั้ง');
+    } finally {
       setIsFetchingLocation(false);
-      return;
     }
-    let loc = await Location.getCurrentPositionAsync({});
-    setCurrentLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
-    setIsFetchingLocation(false);
-    Alert.alert('✅ สำเร็จ', 'ปักหมุดตำแหน่งปัจจุบันเรียบร้อยแล้ว');
   };
 
   const handleAddFood = async () => {
@@ -284,9 +289,9 @@ export default function SoloScreen({ navigation }) {
         image_url: imageUrl,
         category: finalCategory,
         price: newPrice.trim() || '-',
-          restaurant_name: newRestaurantName.trim() || null,
-          lat: currentLocation ? currentLocation.lat : null,
-          lng: currentLocation ? currentLocation.lng : null,
+        restaurant_name: newRestaurantName.trim() || null,
+        lat: currentLocation ? currentLocation.lat : null,
+        lng: currentLocation ? currentLocation.lng : null,
       });
 
       if (error) throw error;
@@ -497,6 +502,7 @@ export default function SoloScreen({ navigation }) {
                     placeholderTextColor="#aaa"
                     value={newCustomCategory}
                     onChangeText={setNewCustomCategory}
+                    maxLength={50}
                   />
                 </>
               )}
@@ -510,6 +516,7 @@ export default function SoloScreen({ navigation }) {
                 placeholderTextColor="#aaa"
                 value={newRestaurantName}
                 onChangeText={setNewRestaurantName}
+                maxLength={200}
               />
               <TouchableOpacity 
                 style={[styles.modalInput, { backgroundColor: currentLocation ? '#e6ffe6' : '#FAFAFA', borderColor: currentLocation ? '#4CAF50' : '#ddd', marginTop: 8, alignItems: 'center' }]} 
@@ -526,6 +533,7 @@ export default function SoloScreen({ navigation }) {
                 placeholderTextColor="#aaa"
                 value={newPrice}
                 onChangeText={setNewPrice}
+                maxLength={30}
               />
 
               {/* ── ปุ่ม ── */}
