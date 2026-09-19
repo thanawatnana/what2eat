@@ -1,18 +1,3 @@
-/*
-* ==========================================
-* 🛋️ ไฟล์ LobbyScreen.js (ห้องพักคอย & ระบบ Real-time)
-* ==========================================
-* [ไลบรารีที่ใช้]
-* - @supabase/supabase-js : ใช้ฟีเจอร์ WebSockets (channel.on) เพื่อดักฟังการเปลี่ยนแปลงแบบสดๆ
-* - expo-clipboard : ใช้สำหรับสร้างปุ่มกดเพื่อ "คัดลอกรหัสห้อง"
-* 
-* [หลักการทำงาน]
-* 1. ใช้ Realtime Subscription ดักฟังตาราง rooms 
-* 2. ถ้ามีเพื่อนเข้ามาในห้อง (ข้อมูลคนในห้องเปลี่ยน) หน้าจอจะอัปเดตรายชื่อสดๆ โดยไม่ต้องรีเฟรช
-* 3. เปิดให้พิมพ์เพิ่ม "เมนูกำหนดเอง" สดๆ และส่งต่อให้ทุกคนในห้องเห็นตรงกัน (ผ่าน channel.send)
-* 4. ดักฟังสถานะห้อง ถ้า Host กดเริ่มเกม (status เปลี่ยนเป็น playing) แอปของทุกคนจะเด้งไปหน้า Swipe อัตโนมัติ
-*/
-
 import React, { useState, useEffect, useRef } from 'react';
 import {
     StyleSheet, Text, View, FlatList, TouchableOpacity,
@@ -20,158 +5,59 @@ import {
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { COLORS } from '../constants/theme';
-import { supabase } from '../supabase';
+import { usePartyRoom } from '../hooks/usePartyRoom';
+import { useAuth } from '../context/AuthContext';
 
 // 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function LobbyScreen({ route, navigation }) {
-    const { roomId, roomCode, participantId, playerName, isHost } = route.params;
-    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
-    const [participants, setParticipants] = useState([]);
-    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
-    const [isStarting, setIsStarting] = useState(false);
-    
-    // Custom Foods State
-    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
-    const [customFoods, setCustomFoods] = useState([]);
-    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+    const { roomId, roomCode, participantId, playerName } = route.params;
+    const { user } = useAuth();
+    const { snapshot, error, busy, act, refresh, leave } = usePartyRoom(roomId, navigation);
+    const participants = snapshot?.participants || [];
+    const customFoods = snapshot?.room.custom_foods || [];
+    const isHost = snapshot?.room.host_user_id === user?.id;
+    const isStarting = busy;
     const [newFoodName, setNewFoodName] = useState('');
-    
-    const channelRef = useRef(null);
+    const moved = useRef(false);
 
-    // ── โหลดรายชื่อผู้เล่นและ Realtime subscription ──────────────
-    // 🔄 useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
     useEffect(() => {
-        fetchParticipants();
-        fetchRoomData();
+      if (!snapshot || moved.current) return;
+      const status = snapshot.room.status;
+      if (status === 'playing' || status === 'done') {
+        moved.current = true;
+        navigation.replace(status === 'done' ? 'Result' : 'Swipe', {
+          roomId, roomCode, participantId, playerName,
+          customFoods: snapshot.foods, matchedFoodId: snapshot.room.matched_food_id,
+        });
+      } else if (status === 'cancelled') {
+        moved.current = true;
+        Alert.alert('ห้องปิดแล้ว', 'เจ้าของห้องออกหรือห้องหมดอายุ');
+        navigation.popToTop();
+      }
+    }, [snapshot, navigation, roomId, roomCode, participantId, playerName]);
 
-        channelRef.current = supabase
-            .channel(`room-${roomId}`)
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'participants', filter: `room_id=eq.${roomId}` },
-                () => fetchParticipants()
-            )
-            .on(
-                'postgres_changes',
-                { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` },
-                (payload) => {
-                    if (payload.new.status === 'playing') {
-                        let parsedFoods = null;
-                        if (payload.new.matched_food_id && payload.new.matched_food_id.startsWith('[')) {
-                            try { parsedFoods = JSON.parse(payload.new.matched_food_id); } catch(e) {}
-                        }
-                        navigation.replace('Swipe', {
-                            roomId, roomCode, participantId, playerName, customFoods: parsedFoods
-                        });
-                    } else if (payload.new.status === 'waiting' && payload.new.matched_food_id) {
-                        try {
-                            const parsed = JSON.parse(payload.new.matched_food_id);
-                            if (Array.isArray(parsed)) setCustomFoods(parsed);
-                        } catch(e) {}
-                    }
-                }
-            )
-            .on(
-                'broadcast',
-                { event: 'add_custom_food' },
-                (payload) => {
-                    if (isHost) {
-                        setCustomFoods(prev => {
-                            const newList = [...prev, payload.payload.food];
-                            supabase.from('rooms').update({ matched_food_id: JSON.stringify(newList) }).eq('id', roomId).then();
-                            return newList;
-                        });
-                    }
-                }
-            )
-            .on(
-                'broadcast',
-                { event: 'remove_custom_food' },
-                (payload) => {
-                    if (isHost) {
-                        setCustomFoods(prev => {
-                            const newList = prev.filter(f => f.id !== payload.payload.foodId);
-                            supabase.from('rooms').update({ matched_food_id: JSON.stringify(newList) }).eq('id', roomId).then();
-                            return newList;
-                        });
-                    }
-                }
-            )
-            .subscribe();
-
-        return () => {
-            if (channelRef.current) supabase.removeChannel(channelRef.current);
-        };
-    }, [roomId]);
-
-    const fetchParticipants = async () => {
-        const { data } = await supabase.from('participants').select('*').eq('room_id', roomId).order('joined_at', { ascending: true });
-        if (data) setParticipants(data);
+    const handleStartGame = () => act('start');
+    const handleAddCustomFood = async () => {
+      if (!newFoodName.trim()) return;
+      if (await act('add_food', { name: newFoodName.trim() })) setNewFoodName('');
     };
-
-    const fetchRoomData = async () => {
-        const { data } = await supabase.from('rooms').select('matched_food_id').eq('id', roomId).single();
-        if (data?.matched_food_id && data.matched_food_id.startsWith('[')) {
-            try { setCustomFoods(JSON.parse(data.matched_food_id)); } catch(e) {}
-        }
-    };
-
-    const handleStartGame = async () => {
-        if (participants.length < 2) {
-            // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
-            Alert.alert('⚠️ ผู้เล่นไม่พอ', 'ต้องมีอย่างน้อย 2 คนถึงจะเริ่มได้!');
-            return;
-        }
-        setIsStarting(true);
-        const { error } = await supabase.from('rooms').update({ status: 'playing' }).eq('id', roomId);
-        if (error) {
-            // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
-            Alert.alert('❌ Error', error.message);
-            setIsStarting(false);
-        }
-    };
-
+    const handleRemoveCustomFood = foodId => act('remove_food', { foodId });
     const handleCopyCode = async () => {
-        await Clipboard.setStringAsync(roomCode);
-        // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
-        Alert.alert('📋 คัดลอกแล้ว!', `รหัสห้อง ${roomCode} ถูกคัดลอกแล้ว`);
+      try { await Clipboard.setStringAsync(roomCode); Alert.alert('คัดลอกแล้ว', roomCode); }
+      catch { Alert.alert('คัดลอกไม่สำเร็จ', roomCode); }
+    };
+    const handleShare = async () => {
+      try { await Share.share({ message: 'มาเล่น Joykin กันเถอะ! รหัสห้อง: ' + roomCode }); }
+      catch { Alert.alert('แชร์ไม่สำเร็จ', roomCode); }
     };
 
-    const handleShare = () => {
-        Share.share({ message: `มาเล่น Joykin กันเถอะ! 🍴\nรหัสห้อง: ${roomCode}` });
-    };
-
-    const handleAddCustomFood = () => {
-        if (!newFoodName.trim()) return;
-        const newFood = { id: `custom-${Date.now()}-${Math.floor(Math.random()*1000)}`, name: newFoodName.trim(), emoji: '🍽️' };
-        
-        if (isHost) {
-            const newList = [...customFoods, newFood];
-            setCustomFoods(newList);
-            supabase.from('rooms').update({ matched_food_id: JSON.stringify(newList) }).eq('id', roomId);
-        } else {
-            channelRef.current.send({ type: 'broadcast', event: 'add_custom_food', payload: { food: newFood } });
-        }
-        setNewFoodName('');
-    };
-
-    const handleRemoveCustomFood = (foodId) => {
-        if (isHost) {
-            const newList = customFoods.filter(f => f.id !== foodId);
-            setCustomFoods(newList);
-            supabase.from('rooms').update({ matched_food_id: JSON.stringify(newList) }).eq('id', roomId);
-        } else {
-            channelRef.current.send({ type: 'broadcast', event: 'remove_custom_food', payload: { foodId } });
-        }
-    };
-
-    const renderParticipant = ({ item, index }) => (
+    const renderParticipant = ({ item }) => (
         <View style={styles.playerRow}>
             <View style={styles.playerAvatar}>
                 <Text style={styles.playerAvatarText}>{item.name.charAt(0).toUpperCase()}</Text>
             </View>
             <Text style={styles.playerName}>{item.name}</Text>
-            {index === 0 && <Text style={styles.hostBadge}>👑 Host</Text>}
+            {item.user_id === snapshot?.room.host_user_id && <Text style={styles.hostBadge}>👑 Host</Text>}
             {item.id === participantId && <Text style={styles.youBadge}>You</Text>}
         </View>
     );
@@ -184,6 +70,8 @@ export default function LobbyScreen({ route, navigation }) {
 
     return (
         <SafeAreaView style={styles.container}>
+            <TouchableOpacity onPress={leave} disabled={busy} style={{ padding: 12 }}><Text>‹ ออกจากห้อง</Text></TouchableOpacity>
+            {!!error && <TouchableOpacity onPress={refresh}><Text style={{ color: '#C0392B', padding: 10 }}>{error} · แตะเพื่อลองใหม่</Text></TouchableOpacity>}
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{flex: 1}}>
                 <FlatList
                     data={participants}
@@ -216,7 +104,7 @@ export default function LobbyScreen({ route, navigation }) {
                                         onChangeText={setNewFoodName}
                                         maxLength={30}
                                     />
-                                    <TouchableOpacity style={styles.addFoodBtn} onPress={handleAddCustomFood}>
+                                    <TouchableOpacity style={styles.addFoodBtn} onPress={handleAddCustomFood} disabled={busy}>
                                         <Text style={styles.addFoodBtnText}>เพิ่ม</Text>
                                     </TouchableOpacity>
                                 </View>
@@ -225,7 +113,7 @@ export default function LobbyScreen({ route, navigation }) {
                                         {customFoods.map(food => (
                                             <View key={food.id} style={styles.customFoodBadge}>
                                                 <Text style={styles.customFoodBadgeText}>{food.name}</Text>
-                                                <TouchableOpacity onPress={() => handleRemoveCustomFood(food.id)}>
+                                                <TouchableOpacity onPress={() => handleRemoveCustomFood(food.id)} disabled={busy}>
                                                     <Text style={{color: '#E74C3C', marginLeft: 6, fontWeight: 'bold'}}>✕</Text>
                                                 </TouchableOpacity>
                                             </View>

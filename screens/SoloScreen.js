@@ -14,7 +14,7 @@
 */
 
 import * as ImagePicker from 'expo-image-picker';
-import { decode } from 'base64-arraybuffer';
+import { uploadImage, discardUpload, IMAGE_PICKER_OPTIONS } from '../utils/imageUpload';
 import { useCallback, useEffect, useState, useRef } from 'react';
 import {
   ActivityIndicator, Alert,
@@ -124,7 +124,7 @@ export default function SoloScreen({ navigation }) {
 
   useEffect(() => { 
     loadFoods(); 
-    const unsubscribe = navigation?.addListener ? navigation.addListener('focus', loadFavorites) : null;
+    const unsubscribe = navigation?.addListener ? navigation.addListener('focus', () => { loadFoods(); loadFavorites(); }) : null;
     loadFavorites();
     return () => { if (unsubscribe) unsubscribe(); };
   }, [loadFoods, loadFavorites, navigation]);
@@ -181,14 +181,15 @@ export default function SoloScreen({ navigation }) {
       // ถ้าเป็นการพลิกมาโชว์อาหาร ให้บันทึกประวัติ
       if (!isFlipped && selected) {
         // 💾 [Backend] เพิ่มข้อมูลใหม่ลงในฐานข้อมูล (INSERT)
-        await supabase.from('history').insert({
+        const { error: historyError } = await supabase.from('history').insert({
           user_id: user.id,
           food_name: selected.name,
           food_category: selected.category,
           mode: 'solo',
           image_url: selected.image_url,
-          emoji: selected.emoji
+
         });
+        if (historyError) Alert.alert('บันทึกประวัติไม่สำเร็จ', 'ผลสุ่มยังใช้งานได้ กรุณาตรวจการเชื่อมต่อ');
       } else {
         // ถ้าพลิกกลับไปหน้าคำถาม ให้ clear ผล
         setCurrentFood(null);
@@ -206,10 +207,10 @@ export default function SoloScreen({ navigation }) {
   const saveToFavorites = async () => {
     if (!currentFood) return;
     // Fix 3: ไม่บันทึก food_emoji เพราะ column ถูกลบออกจาก favorites table แล้ว
-    const { error } = await supabase.from('favorites').insert({
-      user_id: user.id,
-      food_name: currentFood.name,
-      food_category: currentFood.category,
+    const { error } = await supabase.rpc('save_favorite', {
+      p_name: currentFood.name,
+      p_category: currentFood.category || 'Custom',
+      p_image: currentFood.image_url || null,
     });
     if (error) {
       if (error.code === '23505') Alert.alert('❤️', 'มีเมนูนี้ในรายการโปรดแล้วจ้า!');
@@ -229,41 +230,23 @@ export default function SoloScreen({ navigation }) {
       Alert.alert('ไม่ได้รับสิทธิ์', 'กรุณาอนุญาตให้เข้าถึงรูปภาพ');
       return;
     }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
-    });
+    const result = await ImagePicker.launchImageLibraryAsync(IMAGE_PICKER_OPTIONS);
     if (!result.canceled && result.assets[0]) {
+      if (!result.assets[0].base64) { Alert.alert('รูปภาพไม่พร้อม', 'กรุณาเลือกรูปใหม่'); return; }
       setNewImageUri(result.assets[0].uri);
+      setNewImageBase64(result.assets[0].base64);
     }
   };
 
   // ── Task 3: อัปโหลดรูปไป Supabase Storage ──────────────────────────
-  const uploadFoodImage = async (uri, category) => {
-    // แก้ไขพาท: จัดเก็บรูปตามโฟลเดอร์หมวดหมู่ -> แยกด้วย user.id
-    const safeCategory = category ? category.replace(/[^a-zA-Z0-9ก-๙]/g, '') : 'Other';
-    const path = `${safeCategory}/${user.id}/${Date.now()}.jpg`;
-    
-    const response = await fetch(uri);
-    const arrayBuffer = await response.arrayBuffer();
-    
-    const { error } = await supabase.storage
-      .from('food-images')
-      .upload(path, arrayBuffer, { contentType: 'image/jpeg', upsert: true });
-      
-    if (error) throw error;
-    
-    const { data } = supabase.storage.from('food-images').getPublicUrl(path);
-    return data.publicUrl;
-  };
+  const uploadFoodImage = (base64) => uploadImage({ base64, userId: user.id });
 
   // ── Task 3: บันทึกเมนูส่วนตัว (ไม่มี emoji แล้ว มี image_url แทน) ──
   const handleAddFood = async () => {
     if (!newName.trim()) { Alert.alert('⚠️', 'กรุณากรอกชื่อเมนู'); return; }
+    if (savingFood) return;
     setSavingFood(true);
-
+    let uploaded;
     try {
       // ถ้าเลือก "อื่นๆ" ให้ใช้ custom text; ถ้าไม่ให้ใช้ค่าจาก dropdown
       const finalCategory = newCategory === 'อื่นๆ'
@@ -273,7 +256,8 @@ export default function SoloScreen({ navigation }) {
       // อัปโหลดรูปก่อน (ถ้าเลือกไว้) พร้อมระบุหมวดหมู่
       let imageUrl = null;
       if (newImageUri) {
-        imageUrl = await uploadFoodImage(newImageBase64, finalCategory);
+        uploaded = await uploadFoodImage(newImageBase64);
+        imageUrl = uploaded.url;
       }
 
       const { error } = await supabase.from('user_foods').insert({
@@ -284,7 +268,7 @@ export default function SoloScreen({ navigation }) {
         price: newPrice.trim() || '-',
       });
 
-      if (error) { Alert.alert('Error', error.message); return; }
+      if (error) throw error;
 
       // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
 
@@ -294,6 +278,7 @@ export default function SoloScreen({ navigation }) {
       loadFoods();
     } catch (err) {
       // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
+      await discardUpload(uploaded);
       Alert.alert('Error', err.message);
     } finally {
       setSavingFood(false);

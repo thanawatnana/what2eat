@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -66,15 +65,7 @@ export default function HomeScreen({ navigation }) {
   };
 
   const loadAvatar = async () => {
-    if (!user) return;
-    const cachedUrl = await AsyncStorage.getItem('avatar_url_' + user.id);
-    if (cachedUrl) {
-      setAvatar(cachedUrl);
-    } else {
-      const path = `${user.id}/avatar.jpg`;
-      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
-      if (data?.publicUrl) setAvatar(data.publicUrl + '?t=' + Date.now());
-    }
+    setAvatar(user?.is_guest ? null : user?.profile_image_url || null);
   };
 
   // 🔄 useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
@@ -121,14 +112,15 @@ export default function HomeScreen({ navigation }) {
       if (!isFlipped && picked && user) {
         // บันทึกลง history
         // 💾 [Backend] เพิ่มข้อมูลใหม่ลงในฐานข้อมูล (INSERT)
-        await supabase.from('history').insert({
+        const { error: historyError } = await supabase.from('history').insert({
           user_id: user.id,
           food_name: picked.name,
           food_category: picked.category,
           mode: 'solo',
           image_url: picked.image_url,
-          emoji: picked.emoji
+
         });
+        if (historyError) Alert.alert('บันทึกประวัติไม่สำเร็จ', 'ผลสุ่มยังใช้งานได้ กรุณาตรวจการเชื่อมต่อ');
       }
 
       // ถ้าพลิกกลับแล้ว clear ผล เพื่อสุ่มใหม่ได้
@@ -138,10 +130,10 @@ export default function HomeScreen({ navigation }) {
 
   const saveToFavorites = async () => {
     if (!pickedFood || !user) return;
-    const { error } = await supabase.from('favorites').insert({
-      user_id: user.id,
-      food_name: pickedFood.name,
-      food_category: pickedFood.category
+    const { error } = await supabase.rpc('save_favorite', {
+      p_name: pickedFood.name,
+      p_category: pickedFood.category || 'Custom',
+      p_image: pickedFood.image_url || null,
     });
     if (error) {
       if (error.code === '23505') Alert.alert('❤️', 'มีเมนูนี้ในรายการโปรดแล้วจ้า!');

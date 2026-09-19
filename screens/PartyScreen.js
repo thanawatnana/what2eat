@@ -1,13 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   StyleSheet, Text, View, TouchableOpacity, SafeAreaView,
   TextInput, ActivityIndicator, Alert, KeyboardAvoidingView, Platform
 } from 'react-native';
 import { COLORS } from '../constants/theme';
-import { supabase } from '../supabase';
-
-// ฟังก์ชันสร้าง room_code 6 หลัก
-const generateRoomCode = () => Math.floor(100000 + Math.random() * 900000).toString();
+import { partyAction } from '../services/party';
 
 // 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function PartyScreen({ navigation }) {
@@ -18,108 +15,25 @@ export default function PartyScreen({ navigation }) {
   // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [isLoading, setIsLoading] = useState(false);
 
-  // ── สร้างห้องใหม่ ──────────────────────────────────────────────
-  const handleCreateRoom = async () => {
-    if (!playerName.trim()) {
-      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
-      Alert.alert('⚠️ ใส่ชื่อก่อน', 'กรุณาพิมพ์ชื่อของคุณก่อนสร้างห้อง');
+  const pending = useRef(false);
+  const enterRoom = async (action) => {
+    if (pending.current) return;
+    if (!playerName.trim() || (action === 'join' && !/^[0-9]{6}$/.test(roomCode.trim()))) {
+      Alert.alert('ข้อมูลไม่ครบ', 'กรุณาใส่ชื่อ และรหัสห้อง 6 หลักสำหรับเข้าร่วม');
       return;
     }
-    setIsLoading(true);
-
+    pending.current = true; setIsLoading(true);
     try {
-      const newCode = generateRoomCode();
-
-      // 1. สร้าง room
-      const { data: room, error: roomError } = await supabase
-        .from('rooms')
-        .insert({ room_code: newCode, status: 'waiting' })
-        .select()
-        .single();
-
-      if (roomError) throw roomError;
-
-      // 2. เพิ่มตัวเองเป็น participant
-      const { data: participant, error: partError } = await supabase
-        .from('participants')
-        .insert({ room_id: room.id, name: playerName.trim() })
-        .select()
-        .single();
-
-      if (partError) throw partError;
-
-      // 3. ไปหน้า Lobby พร้อมส่ง context
-      // 🧭 คำสั่งเปลี่ยนหน้าจอ
+      const data = await partyAction(action, { name: playerName.trim(), code: roomCode.trim() });
       navigation.navigate('Lobby', {
-        roomId: room.id,
-        roomCode: newCode,
-        participantId: participant.id,
-        playerName: playerName.trim(),
-        isHost: true,
+        roomId: data.room.id, roomCode: data.room.room_code,
+        participantId: data.participantId, playerName: playerName.trim(),
       });
-    } catch (err) {
-      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
-      Alert.alert('❌ เกิดข้อผิดพลาด', err.message);
-    } finally {
-      setIsLoading(false);
-    }
+    } catch (err) { Alert.alert('เกิดข้อผิดพลาด', err.message); }
+    finally { pending.current = false; setIsLoading(false); }
   };
-
-  // ── เข้าร่วมห้อง ───────────────────────────────────────────────
-  const handleJoinRoom = async () => {
-    if (!playerName.trim() || !roomCode.trim()) {
-      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
-      Alert.alert('⚠️ ข้อมูลไม่ครบ', 'กรุณาใส่ทั้งชื่อและรหัสห้อง');
-      return;
-    }
-    if (roomCode.length !== 6) {
-      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
-      Alert.alert('⚠️ รหัสผิด', 'รหัสห้องต้องเป็น 6 หลักเท่านั้น');
-      return;
-    }
-    setIsLoading(true);
-
-    try {
-      // 1. ค้นหาห้องจาก room_code
-      const { data: room, error: roomError } = await supabase
-        .from('rooms')
-        .select('*')
-        .eq('room_code', roomCode.trim())
-        .eq('status', 'waiting')
-        .single();
-
-      if (roomError || !room) {
-        // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
-        Alert.alert('❌ ไม่พบห้อง', 'รหัสห้องไม่ถูกต้องหรือห้องเริ่มเล่นไปแล้ว');
-        setIsLoading(false);
-        return;
-      }
-
-      // 2. เพิ่มตัวเองเป็น participant
-      const { data: participant, error: partError } = await supabase
-        .from('participants')
-        .insert({ room_id: room.id, name: playerName.trim() })
-        .select()
-        .single();
-
-      if (partError) throw partError;
-
-      // 3. ไปหน้า Lobby
-      // 🧭 คำสั่งเปลี่ยนหน้าจอ
-      navigation.navigate('Lobby', {
-        roomId: room.id,
-        roomCode: room.room_code,
-        participantId: participant.id,
-        playerName: playerName.trim(),
-        isHost: false,
-      });
-    } catch (err) {
-      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
-      Alert.alert('❌ เกิดข้อผิดพลาด', err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const handleCreateRoom = () => enterRoom('create');
+  const handleJoinRoom = () => enterRoom('join');
 
   // 🎨 ==========================================
 
@@ -160,11 +74,8 @@ export default function PartyScreen({ navigation }) {
             onPress={() => {
               Alert.alert(
                 '👑 Joykin Premium Required',
-                'ฟีเจอร์นี้สำหรับผู้ใช้ Premium เท่านั้น!\n\nอัปเกรดเพื่อปลดล็อก:\n- โหมดปาร์ตี้กลุ่มใหญ่ (สูงสุด 20 คน)\n- ไม่จำกัดจำนวนเมนูส่วนตัว\n- ไม่มีโฆษณาคั่น\n\nในราคาเพียง 59 บาท/เดือน',
-                [
-                  { text: 'ภายหลัง', style: 'cancel' },
-                  { text: 'อัปเกรดเลย', onPress: () => console.log('Mock Payment Triggered') }
-                ]
+                'Big Party ยังไม่เปิดให้บริการและยังไม่มีการรับชำระเงิน กรุณาใช้ห้องมาตรฐานสูงสุด 4 คน',
+                [{ text: 'ตกลง' }]
               );
             }}
             disabled={isLoading}

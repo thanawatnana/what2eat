@@ -16,10 +16,10 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import 'react-native-gesture-handler';
 import { COLORS } from './constants/theme';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
 import AllFoodsScreen from './screens/AllFoodsScreen';
 import FavScreen from './screens/FavScreen';
@@ -56,7 +56,7 @@ function MainTabs() {
   // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
   // 🎨 ==========================================
   return (
-    <Tab.Navigator
+    <Tab.Navigator detachInactiveScreens={false}
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
@@ -64,7 +64,7 @@ function MainTabs() {
         tabBarInactiveTintColor: '#bbb',
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginBottom: 2 },
         // Bug 1 fix: prevent tab screens from being detached which causes freeze
-        detachInactiveScreens: false,
+
       }}
     >
       <Tab.Screen
@@ -144,28 +144,35 @@ function MainTabs() {
 }
 
 // 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
-export default function App() {
+function AppNavigation() {
+  const { user, loading } = useAuth();
+  if (loading) return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator size="large" color={COLORS.primary} /></View>;
   // 🎨 ==========================================
   // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
   // 🎨 ==========================================
   return (
-    <AuthProvider>
       <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
+          {!user ? <Stack.Group navigationKey="signed-out">
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
+          </Stack.Group> : <Stack.Group navigationKey={user.id}>
           <Stack.Screen name="MainTabs" component={MainTabs} />
           <Stack.Screen name="Party" component={PartyScreen} options={({ navigation }) => ({ headerShown: true, title: '🔥 ปาร์ตี้', headerStyle: { backgroundColor: COLORS.secondary }, headerTintColor: '#fff', headerBackVisible: false, headerLeft: ({ tintColor }) => (<TouchableOpacity onPress={() => navigation.navigate('MainTabs', { screen: 'HomeTab' })} style={{ marginLeft: 8, marginRight: 16 }}><Text style={{ color: tintColor, fontSize: 16, fontWeight: 'bold' }}>{'< หน้าแรก'}</Text></TouchableOpacity>) })} />
-          <Stack.Screen name="Lobby" component={LobbyScreen} options={{ headerShown: true, title: '🏕 ล็อบบี้', headerStyle: { backgroundColor: COLORS.secondary }, headerTintColor: '#fff', headerBackVisible: false }} />
-          <Stack.Screen name="Swipe" component={SwipeScreen} options={{ headerShown: true, title: '🗳 โหวต', headerStyle: { backgroundColor: COLORS.secondary }, headerTintColor: '#fff', headerBackVisible: false }} />
+          <Stack.Screen name="Lobby" component={LobbyScreen} options={{ headerShown: true, title: '🏕 ล็อบบี้', headerStyle: { backgroundColor: COLORS.secondary }, headerTintColor: '#fff', headerBackVisible: false, gestureEnabled: false }} />
+          <Stack.Screen name="Swipe" component={SwipeScreen} options={{ headerShown: true, title: '🗳 โหวต', headerStyle: { backgroundColor: COLORS.secondary }, headerTintColor: '#fff', headerBackVisible: false, gestureEnabled: false }} />
           <Stack.Screen name="Result" component={ResultScreen} options={{ headerShown: true, title: '🎉 ผลลัพธ์', headerStyle: { backgroundColor: COLORS.secondary }, headerTintColor: '#fff', headerBackVisible: false }} />
           <Stack.Screen name="History" component={HistoryScreen} options={({ navigation }) => ({ headerShown: true, title: 'ประวัติการสุ่ม', headerTintColor: COLORS.secondary, headerBackVisible: false, headerLeft: ({ tintColor }) => (<TouchableOpacity onPress={() => navigation.navigate('MainTabs', { screen: 'HomeTab' })} style={{ marginLeft: 8, marginRight: 16 }}><Text style={{ color: tintColor, fontSize: 16, fontWeight: 'bold' }}>{'< หน้าแรก'}</Text></TouchableOpacity>) })} />
           <Stack.Screen name="AllFoods" component={AllFoodsScreen} options={({ navigation }) => ({ headerShown: true, title: 'เมนูอาหารทั้งหมด', headerTintColor: COLORS.secondary, headerBackVisible: false, headerLeft: ({ tintColor }) => (<TouchableOpacity onPress={() => navigation.navigate('MainTabs', { screen: 'HomeTab' })} style={{ marginLeft: 8, marginRight: 16 }}><Text style={{ color: tintColor, fontSize: 16, fontWeight: 'bold' }}>{'< หน้าแรก'}</Text></TouchableOpacity>) })} />
-          <Stack.Screen name="Search" component={SearchScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Search" component={SearchScreen} options={{ headerShown: true, title: 'ค้นหา' }} />
+          </Stack.Group>}
         </Stack.Navigator>
       </NavigationContainer>
-    </AuthProvider>
   );
+}
+
+export default function App() {
+  return <AuthProvider><AppNavigation /></AuthProvider>;
 }
 
 const styles = StyleSheet.create({

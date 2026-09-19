@@ -18,8 +18,6 @@ import {
     StyleSheet, Text, View, TouchableOpacity, SafeAreaView, Animated, Image, ScrollView
 } from 'react-native';
 import { COLORS } from '../constants/theme';
-import { foodList as fallbackFoodList } from '../data/foods';
-import { supabase } from '../supabase';
 
 // 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function ResultScreen({ route, navigation }) {
@@ -58,28 +56,9 @@ export default function ResultScreen({ route, navigation }) {
                 idsToFetch = [matchedFoodId];
             }
 
-            const finalFoods = [];
-
-            for (const id of idsToFetch) {
-                // 1. เช็คใน customFoods ก่อน
-                if (customFoods && customFoods.length > 0) {
-                    const found = customFoods.find(f => f.id === id);
-                    if (found) {
-                        finalFoods.push(found);
-                        continue; // ไปอันต่อไป
-                    }
-                }
-                
-                // 2. หาใน DB
-                const { data } = await supabase.from('foods').select('*').eq('id', id).single();
-                if (data) {
-                    finalFoods.push(data);
-                } else {
-                    // 3. หาใน fallback
-                    const fallback = fallbackFoodList.find(f => f.id === id);
-                    if (fallback) finalFoods.push(fallback);
-                }
-            }
+            const finalFoods = idsToFetch
+                .map(id => customFoods?.find(food => String(food.id) === String(id)))
+                .filter(Boolean);
 
             setMatchedFoods(finalFoods);
             setLoading(false);
@@ -105,12 +84,12 @@ export default function ResultScreen({ route, navigation }) {
 
     const handlePlayAgain = () => {
         // 🧭 คำสั่งเปลี่ยนหน้าจอ
-        navigation.navigate('Party');
+        navigation.replace('Party');
     };
 
     const handleGoHome = () => {
         // 🧭 คำสั่งเปลี่ยนหน้าจอ
-        navigation.navigate('MainTabs');
+        navigation.popToTop();
     };
 
     if (loading) {

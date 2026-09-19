@@ -27,6 +27,7 @@ export default function HistoryScreen({ navigation }) {
   // 🔄 useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
 
   useEffect(() => {
+    loadHistory();
     const unsubscribe = navigation.addListener('focus', loadHistory);
     return unsubscribe;
   }, [navigation, loadHistory]);

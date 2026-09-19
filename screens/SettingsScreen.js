@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useState } from 'react';
 import {
@@ -7,12 +6,10 @@ import {
   TextInput,
   TouchableOpacity, View,
 } from 'react-native';
-import { decode } from 'base64-arraybuffer';
+import { IMAGE_PICKER_OPTIONS, discardUpload, uploadImage } from '../utils/imageUpload';
 import { COLORS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabase';
-
-const AVATAR_CACHE_KEY = 'avatar_url_';
 
 // 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function SettingsScreen({ navigation }) {
@@ -30,54 +27,30 @@ export default function SettingsScreen({ navigation }) {
   // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [savingName, setSavingName] = useState(false);
 
-  // โหลด URL รูปจาก Supabase Storage (หรือ cache)
-  // 🔄 useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
   useEffect(() => {
-    if (!user) return;
-
-    if (user.is_guest) {
-      setAvatar(null);
-      AsyncStorage.removeItem(AVATAR_CACHE_KEY + user.id).catch(() => {});
-      return;
-    }
-
-    AsyncStorage.getItem(AVATAR_CACHE_KEY + user.id).then(cachedUrl => {
-      if (cachedUrl) setAvatar(cachedUrl);
-    });
-    const path = `${user.id}/avatar.jpg`;
-    const { data } = supabase.storage.from('avatars').getPublicUrl(path);
-    if (data?.publicUrl) {
-      const url = data.publicUrl + '?bust=' + Date.now();
-      setAvatar(url);
-    }
+    setAvatar(user?.is_guest ? null : user?.profile_image_url || null);
   }, [user]);
+
+  useEffect(() => navigation.addListener('blur', () => {
+    setIsEditingName(false);
+    setEditName('');
+  }), [navigation]);
 
   // อัปโหลดรูปโปรไฟล์ไป Supabase Storage + อัปเดต profile_image_url ใน DB
   const uploadToSupabase = async (base64Str) => {
+    if (uploading || user?.is_guest) return;
     setUploading(true);
+    let uploaded;
     try {
-      const path = `${user.id}/avatar.jpg`;
-
-      const { error } = await supabase.storage
-        .from('avatars')
-        .upload(path, decode(base64Str), { contentType: 'image/jpeg', upsert: true });
-
-      if (error) throw error;
-
-      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
-      const url = data.publicUrl + '?bust=' + Date.now();
-      setAvatar(url);
-      await AsyncStorage.setItem(AVATAR_CACHE_KEY + user.id, url);
-
-      // 💾 [Backend] อัปเดตแก้ไขข้อมูลในฐานข้อมูล (UPDATE)
-
-      await supabase.from('users').update({ profile_image_url: url }).eq('id', user.id);
-
-      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
-
+      uploaded = await uploadImage({ base64: base64Str, userId: user.id, bucket: 'avatars' });
+      const { data, error } = await supabase.from('users')
+        .update({ profile_image_url: uploaded.url }).eq('id', user.id).select('id');
+      if (error || !data?.length) throw new Error('บันทึกโปรไฟล์ไม่สำเร็จ');
+      setAvatar(uploaded.url);
+      updateUser({ profile_image_url: uploaded.url });
       Alert.alert('✅', 'อัปโหลดรูปสำเร็จ!');
     } catch (err) {
-      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
+      await discardUpload(uploaded);
       Alert.alert('Error', err.message);
     } finally {
       setUploading(false);
@@ -87,20 +60,15 @@ export default function SettingsScreen({ navigation }) {
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') { Alert.alert('ไม่ได้รับสิทธิ์', 'กรุณาอนุญาตให้เข้าถึงรูปภาพ'); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true, aspect: [1, 1], quality: 0.7, base64: true,
-    });
-    if (!result.canceled && result.assets[0].base64) await uploadToSupabase(result.assets[0].base64);
+    const result = await ImagePicker.launchImageLibraryAsync(IMAGE_PICKER_OPTIONS);
+    if (!result.canceled && result.assets[0]?.base64) await uploadToSupabase(result.assets[0].base64);
   };
 
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') { Alert.alert('ไม่ได้รับสิทธิ์', 'กรุณาอนุญาตให้เข้าถึงกล้อง'); return; }
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true, aspect: [1, 1], quality: 0.7, base64: true,
-    });
-    if (!result.canceled && result.assets[0].base64) await uploadToSupabase(result.assets[0].base64);
+    const result = await ImagePicker.launchCameraAsync(IMAGE_PICKER_OPTIONS);
+    if (!result.canceled && result.assets[0]?.base64) await uploadToSupabase(result.assets[0].base64);
   };
 
   const handleChangePhoto = () => {
@@ -126,17 +94,19 @@ export default function SettingsScreen({ navigation }) {
 
   // Task 5: บันทึกชื่อใหม่ → update DB + AuthContext
   const saveEditName = async () => {
+    if (savingName || user?.is_guest) return;
     if (!editName.trim()) { Alert.alert('⚠️', 'กรุณากรอกชื่อที่แสดง'); return; }
     if (editName.trim() === user?.name_account) { setIsEditingName(false); return; }
 
     setSavingName(true);
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('users')
         .update({ name_account: editName.trim() })
-        .eq('id', user.id);
+        .eq('id', user.id)
+        .select('id');
 
-      if (error) throw error;
+      if (error || !data?.length) throw new Error('บันทึกชื่อไม่สำเร็จ');
 
       // อัปเดต global state โดยไม่ต้อง re-login
       updateUser({ name_account: editName.trim() });
@@ -158,15 +128,9 @@ export default function SettingsScreen({ navigation }) {
       {
         text: 'ออกจากระบบ',
         style: 'destructive',
-        onPress: () => {
-          logout();
-          const stackNav = navigation.getParent()?.getParent();
-          if (stackNav) {
-            stackNav.reset({ index: 0, routes: [{ name: 'Login' }] });
-          } else {
-            // 🧭 คำสั่งเปลี่ยนหน้าจอ
-            navigation.navigate('Login');
-          }
+        onPress: async () => {
+          try { await logout(); }
+          catch (err) { Alert.alert('ออกจากระบบไม่สำเร็จ', err.message); }
         },
       },
     ]);

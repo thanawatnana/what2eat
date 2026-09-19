@@ -1,5 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
-import { decode } from 'base64-arraybuffer';
+import { uploadImage, discardUpload, IMAGE_PICKER_OPTIONS } from '../utils/imageUpload';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator, Alert,
@@ -41,6 +41,7 @@ export default function AllFoodsScreen({ navigation }) {
   const [newPrice, setNewPrice] = useState('');
   // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [newImageUri, setNewImageUri] = useState(null);
+  const [newImageBase64, setNewImageBase64] = useState(null);
   // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [savingFood, setSavingFood] = useState(false);
   // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
@@ -87,6 +88,7 @@ export default function AllFoodsScreen({ navigation }) {
   // 🔄 useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
 
   useEffect(() => {
+    loadFoods();
     const unsubscribe = navigation.addListener('focus', loadFoods);
     return unsubscribe;
   }, [navigation, loadFoods]);
@@ -102,7 +104,7 @@ export default function AllFoodsScreen({ navigation }) {
       { text: 'ยกเลิก', style: 'cancel' },
       {
         text: 'ลบ', style: 'destructive', onPress: async () => {
-          const { error } = await supabase.from('user_foods').delete().eq('id', item.id);
+          const { error } = await supabase.from('user_foods').delete().eq('id', item.id).eq('user_id', user.id);
           if (!error) setFoods(prev => prev.filter(f => f.id !== item.id));
           else Alert.alert('Error', error.message);
         }
@@ -114,10 +116,7 @@ export default function AllFoodsScreen({ navigation }) {
   const pickImage = async (setUri, setBase64) => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') { Alert.alert('ไม่ได้รับสิทธิ์', 'กรุณาอนุญาตให้เข้าถึงรูปภาพ'); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true, aspect: [1, 1], quality: 0.7, base64: true,
-    });
+    const result = await ImagePicker.launchImageLibraryAsync(IMAGE_PICKER_OPTIONS);
     if (!result.canceled && result.assets[0].base64) {
       setUri(result.assets[0].uri);
       setBase64(result.assets[0].base64);
@@ -125,23 +124,17 @@ export default function AllFoodsScreen({ navigation }) {
   };
 
   // ── Upload Image to Supabase Storage ─────────────────────────────────────
-  const uploadFoodImage = async (base64Str) => {
-    const path = `user_foods/${user.id}/${Date.now()}.jpg`;
-    const { error } = await supabase.storage
-      .from('food-images')
-      .upload(path, decode(base64Str), { contentType: 'image/jpeg', upsert: true });
-    if (error) throw error;
-    const { data } = supabase.storage.from('food-images').getPublicUrl(path);
-    return data.publicUrl;
-  };
+  const uploadFoodImage = (base64) => uploadImage({ base64, userId: user.id });
 
   // ── Task 4: เพิ่มเมนูใหม่ ────────────────────────────────────────────────
   const handleAddFood = async () => {
     if (!newName.trim()) { Alert.alert('⚠️', 'กรุณากรอกชื่อเมนู'); return; }
+    if (savingFood) return;
     setSavingFood(true);
+    let uploaded;
     try {
       let imageUrl = null;
-      if (newImageBase64) imageUrl = await uploadFoodImage(newImageBase64);
+      if (newImageBase64) { uploaded = await uploadFoodImage(newImageBase64); imageUrl = uploaded.url; }
 
       const finalCategory = newCategory === 'อื่นๆ'
         ? (newCustomCategory.trim() || 'อื่นๆ')
@@ -155,7 +148,7 @@ export default function AllFoodsScreen({ navigation }) {
         price: newPrice.trim() || '-',
       });
 
-      if (error) { Alert.alert('Error', error.message); return; }
+      if (error) throw error;
       // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
       Alert.alert('✅', 'เพิ่มเมนูสำเร็จ!');
       resetAddForm();
@@ -163,6 +156,7 @@ export default function AllFoodsScreen({ navigation }) {
       loadFoods();
     } catch (err) {
       // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
+      await discardUpload(uploaded);
       Alert.alert('Error', err.message);
     } finally {
       setSavingFood(false);
@@ -171,7 +165,7 @@ export default function AllFoodsScreen({ navigation }) {
 
   const resetAddForm = () => {
     setNewName(''); setNewCategory('Thai'); setNewCustomCategory('');
-    setNewPrice(''); setNewImageUri(null); setAddCategoryOpen(false);
+    setNewPrice(''); setNewImageUri(null); setNewImageBase64(null); setAddCategoryOpen(false);
   };
 
   // ── Task 4: เปิด Edit Modal ──────────────────────────────────────────────
@@ -183,7 +177,7 @@ export default function AllFoodsScreen({ navigation }) {
     setEditCategory(isPreset ? item.category : 'อื่นๆ');
     setEditCustomCategory(isPreset ? '' : item.category);
     setEditPrice(item.price || '');
-    setEditImageUri(null);
+    setEditImageUri(null); setEditImageBase64(null);
     setEditCategoryOpen(false);
     setEditModalVisible(true);
   };
@@ -191,10 +185,12 @@ export default function AllFoodsScreen({ navigation }) {
   // ── Task 4: บันทึกการแก้ไข ───────────────────────────────────────────────
   const handleUpdateFood = async () => {
     if (!editName.trim()) { Alert.alert('⚠️', 'กรุณากรอกชื่อเมนู'); return; }
+    if (updatingFood) return;
     setUpdatingFood(true);
+    let uploaded;
     try {
       let imageUrl = editingFood?.image_url || null;
-      if (editImageUri) imageUrl = await uploadFoodImage(editImageUri);
+      if (editImageBase64) { uploaded = await uploadFoodImage(editImageBase64); imageUrl = uploaded.url; }
 
       const finalCategory = editCategory === 'อื่นๆ'
         ? (editCustomCategory.trim() || 'อื่นๆ')
@@ -210,14 +206,11 @@ export default function AllFoodsScreen({ navigation }) {
       const { data: updated, error } = await supabase
         .from('user_foods')
         .update(updatedData)
-        .eq('id', editingFood.id)
+        .eq('id', editingFood.id).eq('user_id', user.id)
         .select(); // ทำให้รู้ว่า update กี่ rows จริง
 
-      if (error) {
-        // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
-        Alert.alert('❌ Error', error.message);
-        return;
-      }
+      if (error) throw error;
+      if (!updated?.length) throw new Error('ไม่พบเมนูหรือไม่มีสิทธิ์แก้ไข');
 
       // อัปเดต local state ทันที (ไม่ต้องรอ reload)
       setFoods(prev => prev.map(f =>
@@ -231,6 +224,7 @@ export default function AllFoodsScreen({ navigation }) {
       loadFoods();
     } catch (err) {
       // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
+      await discardUpload(uploaded);
       Alert.alert('❌ Error', err.message);
     } finally {
       setUpdatingFood(false);

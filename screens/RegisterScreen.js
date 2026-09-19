@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
+    Alert, Linking,
     KeyboardAvoidingView, Platform,
     SafeAreaView, ScrollView,
     StyleSheet, Text,
@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { COLORS } from '../constants/theme';
 import { supabase } from '../supabase';
-import bcrypt from '../utils/bcryptHelper'; // Task 2: ใช้ helper ที่มี fallback
+
 
 // ─── Email Regex (requires real TLD, e.g. .com .net .th) ─────────────────────
 // Fix 1: รับเฉพาะ @gmail.com เท่านั้น (ป้องกัน @gmai.com, @gmail.ckm ฯลฯ)
@@ -29,6 +29,8 @@ export default function RegisterScreen({ navigation }) {
     const [password, setPassword] = useState('');
     // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [loading, setLoading] = useState(false);
+    const [verification, setVerification] = useState(false);
+    const [otp, setOtp] = useState('');
 
     // Task 1: Toggle password visibility
     // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
@@ -59,16 +61,17 @@ export default function RegisterScreen({ navigation }) {
             next.nameAccount = 'กรุณากรอกชื่อที่แสดง (Display Name)';
             valid = false;
         }
-        if (!username.trim()) {
-            next.username = 'กรุณากรอก Username';
+        if (!/^[a-zA-Z0-9_.-]{3,30}$/.test(username.trim())) {
+            next.username = 'Username ต้องเป็น a-z, 0-9, _, . หรือ - จำนวน 3–30 ตัว';
             valid = false;
         }
         if (!EMAIL_REGEX.test(email.trim())) {
             next.email = 'รูปแบบ Email ไม่ถูกต้อง เช่น example@gmail.com';
             valid = false;
         }
-        if (password.length < 6) {
-            next.password = 'Password ต้องมีอย่างน้อย 6 ตัวอักษร';
+        const passwordBytes = encodeURIComponent(password).replace(/%[A-F0-9]{2}/g, 'x').length;
+        if (password.length < 12 || passwordBytes > 72) {
+            next.password = 'Password ต้องมีอย่างน้อย 12 ตัวอักษร และไม่เกิน 72 bytes';
             valid = false;
         }
 
@@ -79,53 +82,32 @@ export default function RegisterScreen({ navigation }) {
     // ─── Register Handler ────────────────────────────────────────────────────
     const handleRegister = async () => {
         clearErrors();
-        if (!validate()) return;
+        if (loading || (!verification && !validate())) return;
+
+        if (verification && !/^\d{6,8}$/.test(otp.trim())) {
+            setFieldError('general', 'กรุณากรอกรหัสยืนยันจากอีเมลให้ครบ');
+            return;
+        }
 
         setLoading(true);
         try {
-            // 1. Check username uniqueness
-            const { data: existingUser } = await supabase
-                .from('users')
-                .select('id')
-                .eq('username', username.trim())
-                .maybeSingle();
-
-            if (existingUser) {
-                setFieldError('username', 'Username นี้ถูกใช้งานแล้ว กรุณาเลือก Username อื่น');
-                return;
+            if (verification) {
+                const { error } = await supabase.auth.verifyOtp({ email: email.trim().toLowerCase(), token: otp.trim(), type: 'email' });
+                if (error) throw new Error('รหัสยืนยันไม่ถูกต้องหรือหมดอายุ');
+            } else {
+                const { data, error } = await supabase.auth.signUp({
+                    email: email.trim().toLowerCase(), password,
+                    options: {
+                        emailRedirectTo: Linking.createURL('auth/callback'),
+                        data: { username: username.trim().toLowerCase(), name_account: nameAccount.trim() },
+                    },
+                });
+                if (error) throw new Error('สมัครไม่สำเร็จ กรุณาตรวจข้อมูลหรือใช้ชื่อผู้ใช้อื่น');
+                if (!data.session) {
+                    setVerification(true);
+                    Alert.alert('ยืนยันอีเมล', 'กรุณาเปิดลิงก์ยืนยันในอีเมล หากอีเมลแสดงรหัสก็สามารถกรอกด้านล่างได้');
+                }
             }
-
-            // 2. Check email uniqueness
-            const { data: existingEmail } = await supabase
-                .from('users')
-                .select('id')
-                .eq('email', email.trim().toLowerCase())
-                .maybeSingle();
-
-            if (existingEmail) {
-                setFieldError('email', 'Email นี้ถูกใช้งานแล้ว กรุณาใช้ Email อื่น');
-                return;
-            }
-
-            // 3. Hash password — Task 2: bcryptHelper มี fallback ที่ทำงานบน RN
-            const salt = await bcrypt.genSalt(10);
-            const passwordHash = await bcrypt.hash(password, salt);
-
-            // 4. Insert new user
-            const { error: insertError } = await supabase.from('users').insert({
-                name_account: nameAccount.trim(),
-                username: username.trim(),
-                email: email.trim().toLowerCase(),
-                password_hash: passwordHash,
-                is_guest: false,
-            });
-
-            if (insertError) throw new Error(insertError.message);
-
-            // 5. Success → navigate to Login immediately
-            // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
-            Alert.alert('สมัครสมาชิกสำเร็จ! 🎉', 'กรุณาเข้าสู่ระบบ');
-            navigation.replace('Login');
 
         } catch (err) {
             setFieldError('general', `เกิดข้อผิดพลาด: ${err.message}`);
@@ -202,7 +184,7 @@ export default function RegisterScreen({ navigation }) {
                         <View style={[styles.inputRow, errors.password ? styles.inputError : null]}>
                             <TextInput
                                 style={styles.inputInner}
-                                placeholder="อย่างน้อย 6 ตัวอักษร"
+                                placeholder="อย่างน้อย 12 ตัวอักษร"
                                 placeholderTextColor="#aaa"
                                 value={password}
                                 onChangeText={v => { setPassword(v); setFieldError('password', ''); }}
@@ -225,6 +207,7 @@ export default function RegisterScreen({ navigation }) {
                             </View>
                         ) : null}
 
+                        {verification && <><Text style={styles.label}>เปิดลิงก์ในอีเมล หรือกรอกรหัสยืนยัน (ถ้ามี)</Text><TextInput style={styles.input} value={otp} onChangeText={setOtp} keyboardType="number-pad" autoComplete="one-time-code" /></>}
                         {/* ── Submit ── */}
                         <TouchableOpacity
                             style={[styles.btn, loading && styles.btnDisabled]}

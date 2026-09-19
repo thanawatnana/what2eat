@@ -27,7 +27,7 @@ export default function FavScreen({ navigation }) {
         const foundFood = foodData?.find(f => f.name === fav.food_name);
         return {
           ...fav,
-          image_url: foundFood?.image_url || null
+          image_url: fav.food_image_url || foundFood?.image_url || null
         };
       });
       setFavList(mergedList);
@@ -48,7 +48,7 @@ export default function FavScreen({ navigation }) {
   if (!user) return null;
 
   const removeFavorite = async (id) => {
-    const { error } = await supabase.from('favorites').delete().eq('id', id);
+    const { error } = await supabase.from('favorites').delete().eq('id', id).eq('user_id', user.id);
     if (!error) setFavList(prev => prev.filter(item => item.id !== id));
     else Alert.alert('Error', error.message);
   };

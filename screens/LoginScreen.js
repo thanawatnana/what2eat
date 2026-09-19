@@ -9,14 +9,16 @@ import {
 import { COLORS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabase';
-import bcrypt from '../utils/bcryptHelper'; // Task 2: ใช้ helper ที่มี fallback
+
 
 // ─── Guest user ID (predefined record in DB) ─────────────────────────────────
-const GUEST_USER_ID = '00000000-0000-4000-8000-000000000000';
+
 
 // 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function LoginScreen({ navigation }) {
-    const { login } = useAuth();
+    const { login, loginGuest, authError } = useAuth();
+    const [verification, setVerification] = useState(null);
+    const [otp, setOtp] = useState('');
 
     // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
 
@@ -41,6 +43,24 @@ export default function LoginScreen({ navigation }) {
     const handleLogin = async () => {
         clearErrors();
 
+        if (loading) return;
+        if (verification) {
+            if (!/^\d{6,8}$/.test(otp.trim())) {
+                setFieldError('general', 'กรุณากรอกรหัสยืนยันจากอีเมลให้ครบ');
+                return;
+            }
+            setLoading(true);
+            try {
+                const { error } = await supabase.auth.verifyOtp({
+                    email: verification, token: otp.trim(), type: 'email',
+                });
+                if (error) throw new Error('รหัสยืนยันไม่ถูกต้องหรือหมดอายุ');
+            } catch (err) {
+                setFieldError('general', `เกิดข้อผิดพลาด: ${err.message}`);
+            } finally { setLoading(false); }
+            return;
+        }
+
         let hasError = false;
         if (!username.trim()) {
             setFieldError('username', 'กรุณากรอก Username');
@@ -54,38 +74,8 @@ export default function LoginScreen({ navigation }) {
 
         setLoading(true);
         try {
-            const { data: userData, error } = await supabase
-                .from('users')
-                .select('id, name_account, username, password_hash, is_guest')
-                .eq('username', username.trim())
-                .maybeSingle();
-
-            if (error) throw new Error(error.message);
-
-            if (!userData) {
-                setFieldError('general', 'Username หรือ Password ไม่ถูกต้อง');
-                return;
-            }
-
-            if (userData.is_guest) {
-                setFieldError('general', 'Username หรือ Password ไม่ถูกต้อง');
-                return;
-            }
-
-            const isMatch = await bcrypt.compare(password, userData.password_hash);
-            if (!isMatch) {
-                setFieldError('general', 'Username หรือ Password ไม่ถูกต้อง');
-                return;
-            }
-
-            login({
-                id: userData.id,
-                name_account: userData.name_account,
-                username: userData.username,
-                is_guest: false,
-            });
-
-            navigation.replace('MainTabs');
+            const result = await login(username.trim(), password);
+            if (result?.verificationRequired) setVerification(result.email);
 
         } catch (err) {
             setFieldError('general', `เกิดข้อผิดพลาด: ${err.message}`);
@@ -99,23 +89,7 @@ export default function LoginScreen({ navigation }) {
         clearErrors();
         setLoading(true);
         try {
-            const { data: guestData, error } = await supabase
-                .from('users')
-                .select('id, name_account, username, is_guest')
-                .eq('id', GUEST_USER_ID)
-                .maybeSingle();
-
-            if (error) throw new Error(error.message);
-            if (!guestData) throw new Error('ไม่พบข้อมูล Guest ในระบบ กรุณาติดต่อผู้ดูแล');
-
-            login({
-                id: guestData.id,
-                name_account: guestData.name_account ?? 'Guest',
-                username: guestData.username ?? 'guest',
-                is_guest: true,
-            });
-
-            navigation.replace('MainTabs');
+            await loginGuest();
 
         } catch (err) {
             setFieldError('general', `เกิดข้อผิดพลาด: ${err.message}`);
@@ -150,6 +124,7 @@ export default function LoginScreen({ navigation }) {
                             placeholder="กรอก Username"
                             placeholderTextColor="#aaa"
                             value={username}
+                            editable={!verification && !loading}
                             onChangeText={v => { setUsername(v); setFieldError('username', ''); }}
                             autoCapitalize="none"
                         />
@@ -163,6 +138,7 @@ export default function LoginScreen({ navigation }) {
                                 placeholder="กรอก Password"
                                 placeholderTextColor="#aaa"
                                 value={password}
+                                editable={!verification && !loading}
                                 onChangeText={v => { setPassword(v); setFieldError('password', ''); }}
                                 secureTextEntry={!isPasswordVisible}
                                 autoCapitalize="none"
@@ -176,6 +152,8 @@ export default function LoginScreen({ navigation }) {
                         </View>
                         {errors.password ? <Text style={styles.errorText}>⚠️ {errors.password}</Text> : null}
 
+                        {verification && <View><Text style={styles.label}>เปิดลิงก์ในอีเมล หรือกรอกรหัสยืนยัน (ถ้ามี)</Text><TextInput style={styles.input} value={otp} onChangeText={setOtp} keyboardType="number-pad" autoComplete="one-time-code" /><TouchableOpacity onPress={() => { setVerification(null); setOtp(''); }}><Text style={styles.link}>กลับไปเข้าสู่ระบบ</Text></TouchableOpacity></View>}
+                        {authError ? <Text style={styles.errorText}>{authError}</Text> : null}
                         {/* ── General Error Banner ── */}
                         {errors.general ? (
                             <View style={styles.generalErrorBox}>

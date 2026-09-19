@@ -1,194 +1,53 @@
-/*
-* ==========================================
-* 💖 ไฟล์ SwipeScreen.js (หน้าปัดการ์ด & อัลกอริทึมจับคู่)
-* ==========================================
-* [ไลบรารีที่ใช้]
-* - react-native-deck-swiper : ไลบรารีสำหรับสร้างการ์ดและแอนิเมชันปัดซ้าย/ขวา เหมือนแอป Tinder
-* - @supabase/supabase-js : เชื่อมฐานข้อมูลดึงรายการอาหารและอัปเดตผลโหวต
-* 
-* [หลักการทำงาน]
-* 1. ดึงเมนูอาหารทั้งหมดมาแสดงเป็นการ์ด 
-* 2. เมื่อผู้ใช้ปัดขวา (Like) โค้ดจะนำ ID อาหารนั้นไปเก็บไว้ใน Array (myLiked)
-* 3. เมื่อปัดครบทุกคน ระบบจะทำงานที่ฟังก์ชัน finishSwiping() เพื่อ "หาจุดตัด (Intersection)" 
-*    ของอาหารที่ทุกคนกด Like เหมือนกัน 100% (Unanimous Vote)
-* 4. แปลงรหัสเมนูที่ตรงกันเป็นข้อความ (JSON.stringify) ส่งขึ้นไปอัปเดตในตาราง rooms 
-*    เพื่อให้หน้า Result นำไปแสดงผลต่อ
-*/
-
 import React, { useState, useEffect, useRef } from 'react';
 import {
     StyleSheet, Text, View, TouchableOpacity, SafeAreaView,
     ActivityIndicator, Animated, Alert, Image
 } from 'react-native';
 import { COLORS } from '../constants/theme';
-import { foodList as fallbackFoodList } from '../data/foods';
-import { supabase } from '../supabase';
+import { usePartyRoom } from '../hooks/usePartyRoom';
 
 // 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function SwipeScreen({ route, navigation }) {
-    const { roomId, roomCode, participantId, playerName, customFoods } = route.params;
-
-    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
-
-    const [currentFoodList, setCurrentFoodList] = useState([]);
-    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
-    const [currentIndex, setCurrentIndex] = useState(0);
-    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
-    const [isDone, setIsDone] = useState(false);
-    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const channelRef = useRef(null);
-
-    // Animation values
+    const { roomId, roomCode, playerName } = route.params;
+    const { snapshot, error, busy: isSubmitting, act, refresh, leave } = usePartyRoom(roomId, navigation);
+    const currentFoodList = snapshot?.foods || [];
+    const voted = new Set(snapshot?.myVotes || []);
+    const nextIndex = currentFoodList.findIndex(food => !voted.has(String(food.id)));
+    const currentIndex = nextIndex < 0 ? currentFoodList.length : nextIndex;
+    const isDone = !!snapshot && nextIndex < 0;
     const fadeAnim = useRef(new Animated.Value(1)).current;
     const scaleAnim = useRef(new Animated.Value(1)).current;
+    const moved = useRef(false);
+    const clicking = useRef(false);
 
-    // 1. โหลดข้อมูลเมนูอาหาร
-    // 🔄 useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
     useEffect(() => {
-        if (customFoods && customFoods.length > 0) {
-            setCurrentFoodList(customFoods);
-        } else {
-            supabase.from('foods').select('*').then(({ data }) => {
-                if (data && data.length > 0) {
-                    setCurrentFoodList(data);
-                } else {
-                    setCurrentFoodList(fallbackFoodList);
-                }
-            });
-        }
-    }, [customFoods]);
+      if (!snapshot || moved.current) return;
+      if (snapshot.room.status === 'done') {
+        moved.current = true;
+        navigation.replace('Result', { matchedFoodId: snapshot.room.matched_food_id, roomCode, customFoods: snapshot.foods });
+      } else if (snapshot.room.status === 'cancelled') {
+        moved.current = true;
+        Alert.alert('รอบนี้ถูกยกเลิก', 'มีผู้เล่นออกจากห้องหรือห้องหมดอายุ กรุณาสร้างห้องใหม่');
+        navigation.popToTop();
+      }
+    }, [snapshot, navigation, roomCode]);
 
-    // 2. Subscribe Realtime — รอ matched_food_id เพื่อไป ResultScreen
-    // 🔄 useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
-    useEffect(() => {
-        channelRef.current = supabase
-            .channel(`result-${roomId}`)
-            .on(
-                'postgres_changes',
-                { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` },
-                (payload) => {
-                    if (payload.new.status === 'done' && payload.new.matched_food_id) {
-                        navigation.replace('Result', {
-                            matchedFoodId: payload.new.matched_food_id,
-                            roomCode,
-                            customFoods // ส่งต่อให้ ResultScreen เพื่อหาชื่อเมนู
-                        });
-                    }
-                }
-            )
-            .subscribe();
-
-        return () => {
-            if (channelRef.current) supabase.removeChannel(channelRef.current);
-        };
-    }, [roomId, customFoods]);
-
-    const animateSwipe = (callback) => {
-        Animated.parallel([
-            Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-            Animated.timing(scaleAnim, { toValue: 0.85, duration: 200, useNativeDriver: true }),
-        ]).start(() => {
-            callback();
-            fadeAnim.setValue(1);
-            scaleAnim.setValue(1);
-        });
+    const vote = async liked => {
+      const food = currentFoodList[currentIndex];
+      if (!food || clicking.current || isSubmitting) return;
+      clicking.current = true;
+      // A lost acknowledgement is recovered by polling; never advance optimistically.
+      try { await act('vote', { foodId: String(food.id), liked }); }
+      finally { clicking.current = false; }
     };
-
-    const recordSwipe = async (foodId, isLiked) => {
-        const { error } = await supabase.from('swipes').insert({
-            room_id: roomId,
-            participant_id: participantId,
-            food_id: foodId,
-            is_liked: isLiked,
-        });
-        if (error) console.error('Swipe error:', error.message);
-    };
-
-    const handleLike = () => {
-        const currentFood = currentFoodList[currentIndex];
-        animateSwipe(async () => {
-            await recordSwipe(currentFood.id, true);
-            goNext();
-        });
-    };
-
-    const handleSkip = () => {
-        const currentFood = currentFoodList[currentIndex];
-        animateSwipe(async () => {
-            await recordSwipe(currentFood.id, false);
-            goNext();
-        });
-    };
-
-    const goNext = () => {
-        const nextIndex = currentIndex + 1;
-        if (nextIndex >= currentFoodList.length) {
-            finishSwiping();
-        } else {
-            setCurrentIndex(nextIndex);
-        }
-    };
-
-    // Fix Bug: ต้องรอให้ทุกคน swipe ครบถึงจะสรุปผล
-    const finishSwiping = async () => {
-        setIsDone(true);
-        setIsSubmitting(true);
-
-        try {
-            // นับจำนวนผู้เล่น
-            const { data: allParticipants } = await supabase
-                .from('participants')
-                .select('id')
-                .eq('room_id', roomId);
-            const totalPlayers = allParticipants?.length ?? 1;
-            const targetSwipes = totalPlayers * currentFoodList.length;
-
-            // เช็คว่าทุกคน swipe ครบหรือยัง
-            const { count: totalSwipes } = await supabase
-                .from('swipes')
-                .select('*', { count: 'exact', head: true })
-                .eq('room_id', roomId);
-
-            if (totalSwipes >= targetSwipes) {
-                // ทุกคนทำเสร็จแล้ว -> สรุปผล!
-                const { data: swipesData } = await supabase
-                    .from('swipes')
-                    .select('food_id, is_liked')
-                    .eq('room_id', roomId)
-                    .eq('is_liked', true);
-
-                const likeCounts = {};
-                swipesData?.forEach(({ food_id }) => {
-                    likeCounts[food_id] = (likeCounts[food_id] || 0) + 1;
-                });
-
-                const sortedFoods = Object.keys(likeCounts).sort((a, b) => likeCounts[b] - likeCounts[a]);
-                
-                // คัดเฉพาะเมนูที่ทุกคน Like (คะแนนโหวตเท่ากับจำนวนผู้เล่น)
-                const perfectMatches = sortedFoods.filter(id => likeCounts[id] >= totalPlayers);
-                
-                let finalMatch = 'no_match'; // ค่า default ถ้าไม่มีใครใจตรงกันเลย
-
-                if (perfectMatches.length > 0) {
-                    // 💡 [UPDATE] ระบบ "แอปฟันธงให้" (Absolute Randomizer)
-                    // ถ้ามีจุดตัดหลายอัน ระบบจะสุ่มเลือกมาแค่ 1 อันเป็นผู้ชนะเด็ดขาด!
-                    const randomIndex = Math.floor(Math.random() * perfectMatches.length);
-                    const absoluteWinner = perfectMatches[randomIndex];
-                    finalMatch = JSON.stringify([absoluteWinner]);
-                }
-
-                await supabase
-                    .from('rooms')
-                    .update({ status: 'done', matched_food_id: finalMatch })
-                    .eq('id', roomId);
-            }
-        } catch (err) {
-            console.error('Finish swipe error:', err.message);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+    const handleLike = () => vote(true);
+    const handleSkip = () => vote(false);
+    const statusControls = (
+      <View>
+        {!!error && <TouchableOpacity onPress={refresh}><Text style={{ color: '#C0392B', padding: 10 }}>{error} · แตะเพื่อลองใหม่</Text></TouchableOpacity>}
+        <TouchableOpacity onPress={leave} disabled={isSubmitting} style={{ padding: 12 }}><Text>‹ ออกจากห้อง</Text></TouchableOpacity>
+      </View>
+    );
 
     if (currentFoodList.length === 0) {
         // 🎨 ==========================================
@@ -196,6 +55,7 @@ export default function SwipeScreen({ route, navigation }) {
         // 🎨 ==========================================
         return (
             <SafeAreaView style={styles.container}>
+                {statusControls}
                 <ActivityIndicator size="large" color={COLORS.primary} />
             </SafeAreaView>
         );
@@ -207,6 +67,7 @@ export default function SwipeScreen({ route, navigation }) {
         // 🎨 ==========================================
         return (
             <SafeAreaView style={styles.container}>
+                {statusControls}
                 <View style={styles.doneCard}>
                     <Text style={styles.doneEmoji}>✅</Text>
                     <Text style={styles.doneTitle}>You're done!</Text>
@@ -230,6 +91,7 @@ export default function SwipeScreen({ route, navigation }) {
 
     return (
         <SafeAreaView style={styles.container}>
+                {statusControls}
             {/* Progress bar */}
             <View style={styles.progressContainer}>
                 <View style={styles.progressBg}>
@@ -254,12 +116,12 @@ export default function SwipeScreen({ route, navigation }) {
 
             {/* ปุ่ม Skip / Like */}
             <View style={styles.buttonRow}>
-                <TouchableOpacity style={[styles.swipeBtn, styles.skipBtn]} onPress={handleSkip}>
+                <TouchableOpacity style={[styles.swipeBtn, styles.skipBtn]} onPress={handleSkip} disabled={isSubmitting}>
                     <Text style={styles.swipeBtnIcon}>👎</Text>
                     <Text style={[styles.swipeBtnText, { color: '#E74C3C' }]}>Skip</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={[styles.swipeBtn, styles.likeBtn]} onPress={handleLike}>
+                <TouchableOpacity style={[styles.swipeBtn, styles.likeBtn]} onPress={handleLike} disabled={isSubmitting}>
                     <Text style={styles.swipeBtnIcon}>👍</Text>
                     <Text style={[styles.swipeBtnText, { color: COLORS.accent }]}>Like!</Text>
                 </TouchableOpacity>
