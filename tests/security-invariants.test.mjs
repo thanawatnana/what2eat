@@ -33,3 +33,11 @@ test('image uploads require base64 and an owner folder', () => {
   assert.match(source, /`\$\{userId\}\//);
   assert.doesNotMatch(source, /upsert: true/);
 });
+
+test('mobile auth callback URLs use expo-linking', () => {
+  for (const file of ['context/AuthContext.js', 'screens/RegisterScreen.js']) {
+    const source = read(file);
+    assert.match(source, /import \* as Linking from ['"]expo-linking['"]/);
+    assert.doesNotMatch(source, /import\s*\{[^}]*\bLinking\b[^}]*\}\s*from ['"]react-native['"]/s);
+  }
+});

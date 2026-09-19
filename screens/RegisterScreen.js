@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import * as Linking from 'expo-linking';
 import {
     ActivityIndicator,
-    Alert, Linking,
+    Alert,
     KeyboardAvoidingView, Platform,
     SafeAreaView, ScrollView,
     StyleSheet, Text,

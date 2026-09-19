@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { AppState, Linking, Platform } from 'react-native';
+import * as Linking from 'expo-linking';
+import { AppState, Platform } from 'react-native';
 import { supabase } from '../supabase';
 
 const AuthContext = createContext(null);
