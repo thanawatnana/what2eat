@@ -32,7 +32,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Joykin ใช้ตำแหน่งเพื่อปักหมุดร้านของเมนูที่คุณบันทึกเท่านั้น"
+          "locationWhenInUsePermission": "Joykin ใช้ตำแหน่งเพื่อแสดงร้านและเมนูใกล้คุณ รวมถึงปักหมุดร้านของเมนูที่คุณบันทึก"
         }
       ]
     ]

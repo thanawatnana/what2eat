@@ -61,3 +61,12 @@ test('application source contains no emoji characters', () => {
     assert.doesNotMatch(readFileSync(file, 'utf8'), /[\u{1F000}-\u{1FAFF}\u2600-\u27BF\uFE0F]/u, file);
   }
 });
+
+test('nearby map has live data and a visible demo fallback', () => {
+  assert.match(read('screens/NearbyMapScreen.js'), /requestForegroundPermissionsAsync/);
+  assert.match(read('services/nearbyPlaces.js'), /overpass-api\.de/);
+  assert.match(read('services/nearbyPlaces.js'), /overpass\.private\.coffee/);
+  assert.match(read('services/nearbyPlaces.js'), /createDemoPlaces/);
+  assert.match(read('screens/HomeScreen.js'), /097-9253802/);
+  assert.match(read('App.js'), /NearbyMapScreen/);
+});

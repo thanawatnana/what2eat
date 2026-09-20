@@ -3,6 +3,7 @@ import {
   Alert,
   Animated,
   Image,
+  Linking,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -187,6 +188,32 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.searchPlaceholder}>ค้นหาอาหาร, เมนู, หรือหมวดหมู่...</Text>
         </TouchableOpacity>
 
+        <View style={styles.adSection}>
+          <View style={styles.adTopRow}>
+            <Text style={styles.adLabel}>พื้นที่โฆษณา</Text>
+            <Text style={styles.adSlot}>ตำแหน่งหน้าแรก</Text>
+          </View>
+          <View style={styles.adImagePlaceholder}>
+            <Text style={styles.adPlaceholderTitle}>พื้นที่สำหรับรูปโปรโมทร้าน</Text>
+            <Text style={styles.adPlaceholderSub}>รองรับรูปแนวนอนของร้าน เมนู หรือโปรโมชัน</Text>
+          </View>
+          <Text style={styles.adTitle}>สนใจโปรโมทร้านบน Joykin</Text>
+          <TouchableOpacity onPress={() => Linking.openURL('tel:0979253802')}>
+            <Text style={styles.adPhone}>ติดต่อ 097-9253802</Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity style={styles.nearbyBanner} onPress={() => navigation.navigate('NearbyMap')} activeOpacity={0.85}>
+          <View style={styles.nearbyPin}>
+            <Text style={styles.nearbyPinText}>ใกล้</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.nearbyTitle}>ค้นหาร้านและเมนูใกล้คุณ</Text>
+            <Text style={styles.nearbySub}>ดูร้านรอบตำแหน่งปัจจุบันบนแผนที่</Text>
+          </View>
+          <Text style={styles.nearbyAction}>เปิดแผนที่</Text>
+        </TouchableOpacity>
+
 
         {/* ── Mystery Card Flip ── */}
         <View style={styles.cardSection}>
@@ -326,6 +353,23 @@ const styles = StyleSheet.create({
   // Search
   searchBar: { marginHorizontal: 20, backgroundColor: '#F7F7F7', borderRadius: 14, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13, marginBottom: 16, borderWidth: 1, borderColor: '#EBEBEB' },
   searchPlaceholder: { flex: 1, color: '#bbb', fontSize: 14 },
+  // Advertising
+  adSection: { marginHorizontal: 20, marginBottom: 14, padding: 16, borderRadius: 20, backgroundColor: '#F7F7F7', borderWidth: 1, borderColor: '#E5E5E5' },
+  adTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  adLabel: { color: COLORS.secondary, fontSize: 12, fontWeight: '900' },
+  adSlot: { color: '#AAA', fontSize: 10, fontWeight: '600' },
+  adImagePlaceholder: { height: 110, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#C8C8C8', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, backgroundColor: '#FFF' },
+  adPlaceholderTitle: { fontSize: 15, color: '#666', fontWeight: '800', textAlign: 'center' },
+  adPlaceholderSub: { fontSize: 11, color: '#AAA', marginTop: 5, textAlign: 'center' },
+  adTitle: { marginTop: 12, fontSize: 14, fontWeight: '800', color: '#333' },
+  adPhone: { marginTop: 3, fontSize: 16, fontWeight: '900', color: COLORS.primary },
+  // Nearby map
+  nearbyBanner: { marginHorizontal: 20, marginBottom: 16, padding: 16, borderRadius: 20, backgroundColor: '#EAF3E5', borderWidth: 1, borderColor: '#C8DCBC', flexDirection: 'row', alignItems: 'center', gap: 12 },
+  nearbyPin: { width: 46, height: 46, borderRadius: 23, backgroundColor: COLORS.accent, alignItems: 'center', justifyContent: 'center' },
+  nearbyPinText: { color: '#FFF', fontSize: 11, fontWeight: '900' },
+  nearbyTitle: { color: '#2C3E50', fontSize: 14, fontWeight: '900' },
+  nearbySub: { color: '#687863', fontSize: 11, marginTop: 3 },
+  nearbyAction: { color: COLORS.accent, fontSize: 11, fontWeight: '900' },
   // Categories
   catRow: { paddingHorizontal: 16, paddingBottom: 16, gap: 10 },
   catChip: { alignItems: 'center', backgroundColor: '#FFF5EE', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: '#FFD8B4', gap: 4, minWidth: 72 },

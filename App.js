@@ -27,6 +27,7 @@ import HistoryScreen from './screens/HistoryScreen';
 import HomeScreen from './screens/HomeScreen';
 import LobbyScreen from './screens/LobbyScreen';
 import LoginScreen from './screens/LoginScreen';
+import NearbyMapScreen from './screens/NearbyMapScreen';
 import PartyScreen from './screens/PartyScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import ResultScreen from './screens/ResultScreen';
@@ -166,6 +167,7 @@ function AppNavigation() {
           <Stack.Screen name="Result" component={ResultScreen} options={{ headerShown: true, title: 'ผลลัพธ์', headerStyle: { backgroundColor: COLORS.secondary }, headerTintColor: '#fff', headerBackVisible: false }} />
           <Stack.Screen name="History" component={HistoryScreen} options={({ navigation }) => ({ headerShown: true, title: 'ประวัติการสุ่ม', headerTintColor: COLORS.secondary, headerBackVisible: false, headerLeft: ({ tintColor }) => (<TouchableOpacity onPress={() => navigation.navigate('MainTabs', { screen: 'HomeTab' })} style={{ marginLeft: 8, marginRight: 16 }}><Text style={{ color: tintColor, fontSize: 16, fontWeight: 'bold' }}>{'< หน้าแรก'}</Text></TouchableOpacity>) })} />
           <Stack.Screen name="AllFoods" component={AllFoodsScreen} options={({ navigation }) => ({ headerShown: true, title: 'เมนูอาหารทั้งหมด', headerTintColor: COLORS.secondary, headerBackVisible: false, headerLeft: ({ tintColor }) => (<TouchableOpacity onPress={() => navigation.navigate('MainTabs', { screen: 'HomeTab' })} style={{ marginLeft: 8, marginRight: 16 }}><Text style={{ color: tintColor, fontSize: 16, fontWeight: 'bold' }}>{'< หน้าแรก'}</Text></TouchableOpacity>) })} />
+          <Stack.Screen name="NearbyMap" component={NearbyMapScreen} options={{ headerShown: true, title: 'ร้านใกล้คุณ', headerTintColor: COLORS.secondary }} />
           <Stack.Screen name="Search" component={SearchScreen} options={{ headerShown: true, title: 'ค้นหา' }} />
           </Stack.Group>}
         </Stack.Navigator>
