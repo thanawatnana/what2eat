@@ -430,6 +430,18 @@ export default function SoloScreen({ navigation }) {
         </Text>
       </TouchableOpacity>
 
+      {isFlipped && currentFood ? (
+        <TouchableOpacity
+          style={styles.mapResultBtn}
+          onPress={() => navigation.navigate('NearbyMap', {
+            foodName: currentFood.name,
+            category: currentFood.category,
+          })}
+        >
+          <Text style={styles.mapResultBtnText}>หาร้านที่ขายเมนูนี้</Text>
+        </TouchableOpacity>
+      ) : null}
+
       {/* ปุ่มเพิ่มเมนูส่วนตัว */}
       <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}>
         <Text style={styles.addBtnText}>เพิ่มเมนูส่วนตัว</Text>
@@ -628,6 +640,8 @@ const styles = StyleSheet.create({
     shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 6,
   },
   randomButtonText: { color: COLORS.white, fontSize: 18, fontWeight: 'bold' },
+  mapResultBtn: { paddingVertical: 12, paddingHorizontal: 30, borderRadius: 22, backgroundColor: COLORS.accent, marginBottom: 12 },
+  mapResultBtnText: { color: '#FFF', fontSize: 14, fontWeight: '800' },
   addBtn: { paddingVertical: 12, paddingHorizontal: 30, borderRadius: 20, borderWidth: 1.5, borderColor: COLORS.secondary },
   addBtnText: { color: COLORS.secondary, fontSize: 14, fontWeight: '700' },
   // ── Modal ──

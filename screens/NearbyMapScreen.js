@@ -21,7 +21,8 @@ const formatDistance = distanceKm => distanceKm < 1
   ? `${Math.max(1, Math.round(distanceKm * 1000))} เมตร`
   : `${distanceKm.toFixed(1)} กม.`;
 
-export default function NearbyMapScreen() {
+export default function NearbyMapScreen({ route }) {
+  const foodName = String(route?.params?.foodName || '').trim();
   const [center, setCenter] = useState(DEMO_CENTER);
   const [places, setPlaces] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -30,13 +31,13 @@ export default function NearbyMapScreen() {
   const [loading, setLoading] = useState(true);
 
   const useDemo = useCallback((origin = DEMO_CENTER, message = 'กำลังแสดงข้อมูลตัวอย่าง') => {
-    const demo = createDemoPlaces(origin);
+    const demo = createDemoPlaces(origin, foodName);
     setCenter(origin);
     setPlaces(demo);
     setSelected(demo[0]);
     setStatus('demo');
     setAreaName(message);
-  }, []);
+  }, [foodName]);
 
   const loadNearby = useCallback(async () => {
     setLoading(true);
@@ -69,7 +70,7 @@ export default function NearbyMapScreen() {
       }
 
       try {
-        const nearby = await fetchNearbyPlaces(current);
+        const nearby = await fetchNearbyPlaces(current, foodName ? 5000 : 3000, foodName);
         if (!nearby.length) {
           useDemo(current, 'ไม่พบข้อมูลร้าน จึงแสดงร้านตัวอย่างรอบตำแหน่งของคุณ');
           return;
@@ -103,8 +104,13 @@ export default function NearbyMapScreen() {
         contentContainerStyle={styles.content}
       >
         <View style={styles.intro}>
-          <Text style={styles.title}>ร้านและเมนูใกล้คุณ</Text>
+          <Text style={styles.title}>{foodName ? `ร้านที่น่าจะขาย ${foodName}` : 'ร้านและเมนูใกล้คุณ'}</Text>
           <Text style={styles.subtitle}>{areaName}</Text>
+          {foodName ? (
+            <View style={styles.foodQueryBadge}>
+              <Text style={styles.foodQueryText}>ผลการสุ่ม: {foodName}</Text>
+            </View>
+          ) : null}
           <View style={[styles.sourceBadge, status === 'live' ? styles.liveBadge : styles.demoBadge]}>
             <Text style={styles.sourceText}>
               {status === 'live' ? 'ข้อมูลร้านจริงจาก OpenStreetMap' : 'ข้อมูลตัวอย่างสำหรับแสดงระบบ'}
@@ -149,6 +155,7 @@ export default function NearbyMapScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.placeName}>{selected.name}</Text>
                 <Text style={styles.placeMeta}>{selected.category} · {formatDistance(selected.distanceKm)}</Text>
+                {foodName && selected.matchScore > 0 ? <Text style={styles.matchText}>ตรงกับประเภทของเมนูที่สุ่มได้</Text> : null}
               </View>
               <TouchableOpacity style={styles.directionButton} onPress={() => openDirections(selected)}>
                 <Text style={styles.directionText}>เปิดเส้นทาง</Text>
@@ -156,7 +163,7 @@ export default function NearbyMapScreen() {
             </View>
             {selected.address ? <Text style={styles.address}>{selected.address}</Text> : null}
             {selected.openingHours ? <Text style={styles.address}>เวลาเปิด: {selected.openingHours}</Text> : null}
-            <Text style={styles.menuTitle}>เมนูที่น่าจะพบ</Text>
+            <Text style={styles.menuTitle}>{foodName ? `เมนูที่เกี่ยวข้องกับ ${foodName}` : 'เมนูที่น่าจะพบ'}</Text>
             <View style={styles.menuRow}>
               {selected.menus.map(menu => (
                 <View key={menu} style={styles.menuChip}>
@@ -200,6 +207,8 @@ const styles = StyleSheet.create({
   intro: { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 14 },
   title: { fontSize: 25, fontWeight: '900', color: '#2C3E50' },
   subtitle: { marginTop: 4, fontSize: 14, color: '#777' },
+  foodQueryBadge: { alignSelf: 'flex-start', marginTop: 9, paddingHorizontal: 11, paddingVertical: 6, borderRadius: 14, backgroundColor: '#EAF3E5' },
+  foodQueryText: { color: COLORS.accent, fontSize: 12, fontWeight: '800' },
   sourceBadge: { alignSelf: 'flex-start', marginTop: 10, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 },
   liveBadge: { backgroundColor: '#E8F5E9' },
   demoBadge: { backgroundColor: '#FFF3E0' },
@@ -212,6 +221,7 @@ const styles = StyleSheet.create({
   detailHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   placeName: { fontSize: 18, fontWeight: '900', color: '#2C3E50' },
   placeMeta: { marginTop: 3, color: COLORS.secondary, fontSize: 12, fontWeight: '700' },
+  matchText: { marginTop: 4, color: COLORS.accent, fontSize: 10, fontWeight: '700' },
   directionButton: { backgroundColor: COLORS.primary, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 9 },
   directionText: { color: '#FFF', fontSize: 11, fontWeight: '800' },
   address: { marginTop: 8, color: '#666', fontSize: 12 },

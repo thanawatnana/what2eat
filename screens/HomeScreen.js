@@ -280,6 +280,18 @@ export default function HomeScreen({ navigation }) {
               {isFlipping ? ' กำลังเปิดเผย...' : isFlipped ? ' สุ่มใหม่' : ' สุ่มเมนู!'}
             </Text>
           </TouchableOpacity>
+
+          {isFlipped && pickedFood ? (
+            <TouchableOpacity
+              style={styles.resultMapBtn}
+              onPress={() => navigation.navigate('NearbyMap', {
+                foodName: pickedFood.name,
+                category: pickedFood.category,
+              })}
+            >
+              <Text style={styles.resultMapBtnText}>หาร้านที่ขายเมนูนี้</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         {/* ── Party Banner ── */}
@@ -395,6 +407,8 @@ const styles = StyleSheet.create({
   favBtnText: { fontSize: 13, color: '#E74C3C', fontWeight: 'bold' },
   flipBtn: { marginTop: 24, backgroundColor: COLORS.primary, paddingVertical: 14, paddingHorizontal: 44, borderRadius: 28, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 6 },
   flipBtnText: { color: '#fff', fontSize: 16, fontWeight: '900' },
+  resultMapBtn: { marginTop: 12, paddingVertical: 11, paddingHorizontal: 24, borderRadius: 22, backgroundColor: COLORS.accent },
+  resultMapBtnText: { color: '#FFF', fontSize: 13, fontWeight: '900' },
   // Party
   partyBanner: { marginHorizontal: 20, backgroundColor: '#8B2626', borderRadius: 20, padding: 18, flexDirection: 'row', alignItems: 'center', marginBottom: 24, gap: 14 },
   partyBannerTitle: { fontSize: 16, fontWeight: '900', color: '#fff' },

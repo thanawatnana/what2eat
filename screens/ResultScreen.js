@@ -157,6 +157,15 @@ export default function ResultScreen({ route, navigation }) {
                                 <Text style={styles.tag}>{food.category || 'Custom'}</Text>
                                 {food.price && <Text style={styles.priceTag}>฿ {food.price}</Text>}
                             </View>
+                            <TouchableOpacity
+                                style={styles.mapBtn}
+                                onPress={() => navigation.navigate('NearbyMap', {
+                                    foodName: food.name,
+                                    category: food.category,
+                                })}
+                            >
+                                <Text style={styles.mapBtnText}>หาร้านที่ขายเมนูนี้</Text>
+                            </TouchableOpacity>
                         </Animated.View>
                     ))}
                     <View style={styles.divider} />
@@ -211,6 +220,8 @@ const styles = StyleSheet.create({
     enjoyText: { fontSize: 16, color: 'gray', fontWeight: 'bold', fontStyle: 'italic', marginBottom: 20 },
     btn: { width: '100%', paddingVertical: 18, borderRadius: 20, alignItems: 'center' },
     btnText: { color: COLORS.white, fontSize: 18, fontWeight: 'bold' },
+    mapBtn: { marginTop: 20, paddingHorizontal: 22, paddingVertical: 12, borderRadius: 20, backgroundColor: COLORS.accent },
+    mapBtnText: { color: COLORS.white, fontSize: 14, fontWeight: '800' },
     noMatchTitle: { fontSize: 26, fontWeight: 'bold', color: '#E74C3C', marginBottom: 10 },
     noMatchSubtitle: { fontSize: 16, color: 'gray', textAlign: 'center', lineHeight: 24 },
 });

@@ -70,3 +70,12 @@ test('nearby map has live data and a visible demo fallback', () => {
   assert.match(read('screens/HomeScreen.js'), /097-9253802/);
   assert.match(read('App.js'), /NearbyMapScreen/);
 });
+
+test('random results can open map search for the selected food', () => {
+  for (const file of ['screens/HomeScreen.js', 'screens/SoloScreen.js', 'screens/ResultScreen.js']) {
+    assert.match(read(file), /navigate\(['"]NearbyMap['"][\s\S]*foodName:/, file);
+    assert.match(read(file), /หาร้านที่ขายเมนูนี้/, file);
+  }
+  assert.match(read('screens/NearbyMapScreen.js'), /route\?\.params\?\.foodName/);
+  assert.match(read('services/nearbyPlaces.js'), /rankPlacesForFood/);
+});
