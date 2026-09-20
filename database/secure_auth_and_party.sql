@@ -35,6 +35,10 @@ begin
     update public.users set password_hash = null where id = new.id;
     return new;
   end if;
+  -- Email accounts receive a profile only after the OTP has been verified.
+  if not coalesce(new.is_anonymous, false) and new.email_confirmed_at is null then
+    return new;
+  end if;
   v_username := case when new.is_anonymous then 'guest_' || replace(new.id::text, '-', '')
     else lower(btrim(new.raw_user_meta_data->>'username')) end;
   if v_username is null or (not new.is_anonymous and v_username !~ '^[a-z0-9_.-]{3,30}$') then
@@ -48,7 +52,8 @@ begin
 end $$;
 revoke all on function joykin_private.provision_user() from public, anon, authenticated;
 drop trigger if exists joykin_provision_user on auth.users;
-create trigger joykin_provision_user after insert on auth.users for each row execute function joykin_private.provision_user();
+create trigger joykin_provision_user after insert or update of email_confirmed_at on auth.users
+for each row execute function joykin_private.provision_user();
 
 -- Remove permissive legacy policies only on tables owned by this application.
 do $$ declare p record; begin
@@ -131,6 +136,28 @@ language sql security definer set search_path = '' as $$
 $$;
 revoke all on function public.login_attempt(text) from public, anon, authenticated;
 grant execute on function public.login_attempt(text) to service_role;
+
+create or replace function public.registration_attempt(p_key text) returns boolean
+language sql security definer set search_path = '' as $$
+  select joykin_private.take_rate('register:' || p_key, 5, 900)
+    and joykin_private.take_rate('register:global', 100, 60)
+$$;
+revoke all on function public.registration_attempt(text) from public, anon, authenticated;
+grant execute on function public.registration_attempt(text) to service_role;
+
+create or replace function public.registration_conflict(p_username text, p_email text default null) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists(
+    select 1 from public.users u where lower(u.username) = lower(p_username)
+      or (p_email is not null and u.email is not null and lower(u.email) = lower(p_email))
+  ) or exists(
+    select 1 from auth.users a where not coalesce(a.is_anonymous, false)
+      and (lower(a.raw_user_meta_data->>'username') = lower(p_username)
+        or (p_email is not null and a.email is not null and lower(a.email) = lower(p_email)))
+  )
+$$;
+revoke all on function public.registration_conflict(text,text) from public, anon, authenticated;
+grant execute on function public.registration_conflict(text,text) to service_role;
 
 -- The Edge Function can resolve an account without exposing profile rows or hashes.
 create or replace function public.login_profile(p_identifier text, p_by_email boolean) returns jsonb
@@ -232,7 +259,7 @@ begin
           if jsonb_array_length(v_room.custom_foods) >= 50 then raise exception 'เพิ่มได้สูงสุด 50 เมนู'; end if;
           v_name := btrim(p_payload->>'name');
           if v_name is null or length(v_name) not between 1 and 30 then raise exception 'กรุณาระบุชื่อเมนู 1–30 ตัวอักษร'; end if;
-          v_food := jsonb_build_object('id',gen_random_uuid()::text,'name',v_name,'category','Custom','emoji','🍽️');
+          v_food := jsonb_build_object('id',gen_random_uuid()::text,'name',v_name,'category','Custom');
           update public.rooms set custom_foods=custom_foods || jsonb_build_array(v_food) where id=v_room.id returning * into v_room;
         else
           update public.rooms set custom_foods=coalesce((select jsonb_agg(f) from jsonb_array_elements(custom_foods) f where f->>'id' <> p_payload->>'foodId'), '[]')

@@ -1,6 +1,6 @@
 /*
 * ==========================================
-* 📸 ไฟล์ SoloScreen.js (หน้าเพิ่มเมนูส่วนตัว & จัดการรูปภาพ)
+*  ไฟล์ SoloScreen.js (หน้าเพิ่มเมนูส่วนตัว & จัดการรูปภาพ)
 * ==========================================
 * [ไลบรารีที่ใช้]
 * - expo-image-picker : ขอสิทธิ์เข้าถึงคลังรูปภาพและกล้องของมือถือ
@@ -37,59 +37,59 @@ import * as Location from 'expo-location';
 
 // Task 4: หมวดหมู่สำหรับ Filter Chips
 const FILTER_CATEGORIES = [
-  { emoji: '🍽️', label: 'ทั้งหมด', value: 'All' },
-  { emoji: '🍜', label: 'อาหารไทย', value: 'Thai' },
-  { emoji: '🍣', label: 'อาหารญี่ปุ่น', value: 'Japanese' },
-  { emoji: '🥗', label: 'สุขภาพ', value: 'Healthy' },
-  { emoji: '🍔', label: 'ฟาสต์ฟู้ด', value: 'Fast Food' },
-  { emoji: '🍲', label: 'ปาร์ตี้', value: 'Party' },
+  { label: 'ทั้งหมด', value: 'All' },
+  { label: 'อาหารไทย', value: 'Thai' },
+  { label: 'อาหารญี่ปุ่น', value: 'Japanese' },
+  { label: 'สุขภาพ', value: 'Healthy' },
+  { label: 'ฟาสต์ฟู้ด', value: 'Fast Food' },
+  { label: 'ปาร์ตี้', value: 'Party' },
 ];
 
 // Task 3: หมวดหมู่อาหารสำเร็จรูป (ตัวเลือก dropdown)
 const CATEGORIES = ['Thai', 'Japanese', 'Western', 'Healthy', 'Fast Food', 'Party', 'อื่นๆ'];
 
-// 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
+//  ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function SoloScreen({ navigation }) {
   const { user } = useAuth();
 
   // ── State หลัก ──────────────────────────────────────────────────────────
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [allFoods, setAllFoods] = useState([]);
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [currentFood, setCurrentFood] = useState(null);
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [isFlipped, setIsFlipped] = useState(false);
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [isFlipping, setIsFlipping] = useState(false);
   const flipAnim = useRef(new Animated.Value(0)).current;
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [loadingFoods, setLoadingFoods] = useState(true);
 
   // Bug 4 fix: Multi-select category filter (array instead of single string)
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [selectedCategories, setSelectedCategories] = useState([]);
 
   // ── Modal เพิ่มเมนูส่วนตัว (Task 3) ─────────────────────────────────────
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [modalVisible, setModalVisible] = useState(false);
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [newName, setNewName] = useState('');
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [newCategory, setNewCategory] = useState('Thai');
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [newCustomCategory, setNewCustomCategory] = useState('');
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [newPrice, setNewPrice] = useState('');
   const [newRestaurantName, setNewRestaurantName] = useState('');
   const [currentLocation, setCurrentLocation] = useState(null);
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [newImageUri, setNewImageUri] = useState(null);
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [newImageBase64, setNewImageBase64] = useState(null);  // URI รูปที่เลือก (local)
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [savingFood, setSavingFood] = useState(false);
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
 
   // ── โหลดเมนูทั้งหมด (ระบบ + ส่วนตัว) ─────────────────────────────────────
@@ -107,14 +107,14 @@ export default function SoloScreen({ navigation }) {
       ];
       setAllFoods(combined);
     } catch (err) {
-      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
+      //  โชว์กล่องข้อความแจ้งเตือนผู้ใช้
       Alert.alert('Error', err.message);
     } finally {
       setLoadingFoods(false);
     }
   }, [user?.id]);
 
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
 
   const [favFoods, setFavFoods] = useState([]);
 
@@ -124,7 +124,7 @@ export default function SoloScreen({ navigation }) {
     if (data) setFavFoods(data.map(f => f.food_name));
   }, [user?.id]);
 
-  // 🔄 useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
+  //  useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
 
   useEffect(() => { 
     loadFoods(); 
@@ -184,7 +184,7 @@ export default function SoloScreen({ navigation }) {
       
       // ถ้าเป็นการพลิกมาโชว์อาหาร ให้บันทึกประวัติ
       if (!isFlipped && selected) {
-        // 💾 [Backend] เพิ่มข้อมูลใหม่ลงในฐานข้อมูล (INSERT)
+        //  [Backend] เพิ่มข้อมูลใหม่ลงในฐานข้อมูล (INSERT)
         const { error: historyError } = await supabase.from('history').insert({
           user_id: user.id,
           food_name: selected.name,
@@ -217,11 +217,11 @@ export default function SoloScreen({ navigation }) {
       p_image: currentFood.image_url || null,
     });
     if (error) {
-      if (error.code === '23505') Alert.alert('❤️', 'มีเมนูนี้ในรายการโปรดแล้วจ้า!');
+      if (error.code === '23505') Alert.alert('เมนูโปรด', 'มีเมนูนี้ในรายการโปรดแล้ว');
       else Alert.alert('Error', error.message);
     } else {
-      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
-      Alert.alert('❤️', 'บันทึกเมนูโปรดสำเร็จ!');
+      //  โชว์กล่องข้อความแจ้งเตือนผู้ใช้
+      Alert.alert('สำเร็จ', 'บันทึกเมนูโปรดสำเร็จ');
       setFavFoods(prev => [...prev, currentFood.name]);
     }
   };
@@ -230,7 +230,7 @@ export default function SoloScreen({ navigation }) {
   const pickFoodImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
+      //  โชว์กล่องข้อความแจ้งเตือนผู้ใช้
       Alert.alert('ไม่ได้รับสิทธิ์', 'กรุณาอนุญาตให้เข้าถึงรูปภาพ');
       return;
     }
@@ -257,7 +257,7 @@ export default function SoloScreen({ navigation }) {
       }
       const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       setCurrentLocation({ lat: location.coords.latitude, lng: location.coords.longitude });
-      Alert.alert('✅ สำเร็จ', 'ปักหมุดตำแหน่งปัจจุบันเรียบร้อยแล้ว');
+      Alert.alert('สำเร็จ', 'ปักหมุดตำแหน่งปัจจุบันเรียบร้อยแล้ว');
     } catch {
       Alert.alert('ดึงตำแหน่งไม่สำเร็จ', 'กรุณาเปิด GPS แล้วลองอีกครั้ง');
     } finally {
@@ -266,7 +266,7 @@ export default function SoloScreen({ navigation }) {
   };
 
   const handleAddFood = async () => {
-    if (!newName.trim()) { Alert.alert('⚠️', 'กรุณากรอกชื่อเมนู'); return; }
+    if (!newName.trim()) { Alert.alert('ข้อมูลไม่ครบ', 'กรุณากรอกชื่อเมนู'); return; }
     if (savingFood) return;
     setSavingFood(true);
     let uploaded;
@@ -296,14 +296,14 @@ export default function SoloScreen({ navigation }) {
 
       if (error) throw error;
 
-      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
+      //  โชว์กล่องข้อความแจ้งเตือนผู้ใช้
 
-      Alert.alert('✅', 'เพิ่มเมนูสำเร็จ!');
+      Alert.alert('สำเร็จ', 'เพิ่มเมนูสำเร็จ');
       resetForm();
       setModalVisible(false);
       loadFoods();
     } catch (err) {
-      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
+      //  โชว์กล่องข้อความแจ้งเตือนผู้ใช้
       await discardUpload(uploaded);
       Alert.alert('Error', err.message);
     } finally {
@@ -339,9 +339,9 @@ export default function SoloScreen({ navigation }) {
           const isActive = cat.value === 'All'
             ? selectedCategories.length === 0
             : selectedCategories.includes(cat.value);
-          // 🎨 ==========================================
-          // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
-          // 🎨 ==========================================
+          //  ==========================================
+          //  ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+          //  ==========================================
           return (
             <TouchableOpacity
               key={cat.value}
@@ -349,7 +349,6 @@ export default function SoloScreen({ navigation }) {
               onPress={() => toggleCategory(cat.value)}
               activeOpacity={0.7}
             >
-              <Text style={{ fontSize: 16 }}>{cat.emoji}</Text>
               <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>{cat.label}</Text>
             </TouchableOpacity>
           );
@@ -394,13 +393,13 @@ export default function SoloScreen({ navigation }) {
                     <Text style={styles.priceTag}>฿ {currentFood.price}</Text>
                   </View>
                   {currentFood.source === 'custom' && (
-                    <Text style={styles.customBadge}>⭐ เมนูของคุณ</Text>
+                    <Text style={styles.customBadge}>เมนูของคุณ</Text>
                   )}
                   {(() => {
                     const isFav = favFoods.includes(currentFood.name);
-                    // 🎨 ==========================================
-                    // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
-                    // 🎨 ==========================================
+                    //  ==========================================
+                    //  ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+                    //  ==========================================
                     return (
                       <TouchableOpacity 
                         style={[styles.favBtn, isFav && { backgroundColor: '#F0F0F0', borderColor: '#CCC' }]} 
@@ -408,7 +407,7 @@ export default function SoloScreen({ navigation }) {
                         disabled={isFlipping || isFav}
                       >
                         <Text style={[styles.favBtnText, isFav && { color: '#999' }]}>
-                          {isFav ? '❤️ บันทึกแล้ว' : '❤️ บันทึกเมนูโปรด'}
+                          {isFav ? ' บันทึกแล้ว' : ' บันทึกเมนูโปรด'}
                         </Text>
                       </TouchableOpacity>
                     );
@@ -427,13 +426,13 @@ export default function SoloScreen({ navigation }) {
         disabled={isFlipping || allFoods.length === 0}
       >
         <Text style={styles.randomButtonText}>
-          {isFlipping ? '✨ กำลังเปิดเผย...' : isFlipped ? '🔄 สุ่มใหม่อีกครั้ง' : '🎲 เริ่มสุ่มเมนู'}
+          {isFlipping ? ' กำลังเปิดเผย...' : isFlipped ? ' สุ่มใหม่อีกครั้ง' : ' เริ่มสุ่มเมนู'}
         </Text>
       </TouchableOpacity>
 
       {/* ปุ่มเพิ่มเมนูส่วนตัว */}
       <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}>
-        <Text style={styles.addBtnText}>➕ เพิ่มเมนูส่วนตัว</Text>
+        <Text style={styles.addBtnText}>เพิ่มเมนูส่วนตัว</Text>
       </TouchableOpacity>
 
       {/* ── Modal เพิ่มเมนู (Task 3: ไม่มี emoji / มีรูป + category dropdown) ── */}
@@ -441,7 +440,7 @@ export default function SoloScreen({ navigation }) {
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <ScrollView contentContainerStyle={styles.modalScroll} keyboardShouldPersistTaps="handled">
             <View style={styles.modalCard}>
-              <Text style={styles.modalTitle}>➕ เพิ่มเมนูส่วนตัว</Text>
+              <Text style={styles.modalTitle}>เพิ่มเมนูส่วนตัว</Text>
 
               {/* ── Image Picker (แทน emoji) ── */}
               <Text style={styles.modalLabel}>รูปภาพเมนู</Text>
@@ -450,7 +449,6 @@ export default function SoloScreen({ navigation }) {
                   <Image source={{ uri: newImageUri }} style={styles.imagePreview} />
                 ) : (
                   <View style={styles.imagePlaceholder}>
-                    <Text style={styles.imagePlaceholderIcon}>📷</Text>
                     <Text style={styles.imagePlaceholderText}>แตะเพื่อเลือกรูป</Text>
                   </View>
                 )}
@@ -508,7 +506,7 @@ export default function SoloScreen({ navigation }) {
               )}
 
               {/* ── ราคา ── */}
-                            {/* 📍 ปักหมุดร้านอาหาร */}
+                            {/*  ปักหมุดร้านอาหาร */}
               <Text style={styles.modalLabel}>ชื่อร้านอาหาร (ไม่บังคับ)</Text>
               <TextInput
                 style={styles.modalInput}
@@ -523,7 +521,7 @@ export default function SoloScreen({ navigation }) {
                 onPress={handleGetLocation}
                 disabled={isFetchingLocation}
               >
-                {isFetchingLocation ? <ActivityIndicator color="#4CAF50" /> : <Text style={{ color: currentLocation ? '#4CAF50' : '#666', fontWeight: 'bold' }}>{currentLocation ? '📍 ปักหมุดแล้ว' : '📍 ดึงพิกัด GPS ปัจจุบัน'}</Text>}
+                {isFetchingLocation ? <ActivityIndicator color="#4CAF50" /> : <Text style={{ color: currentLocation ? '#4CAF50' : '#666', fontWeight: 'bold' }}>{currentLocation ? 'ปักหมุดแล้ว' : 'ดึงพิกัด GPS ปัจจุบัน'}</Text>}
               </TouchableOpacity>
 
                 <Text style={styles.modalLabel}>ราคา (ไม่บังคับ)</Text>
@@ -644,7 +642,6 @@ const styles = StyleSheet.create({
   imagePicker: { borderWidth: 1.5, borderColor: '#ddd', borderRadius: 12, overflow: 'hidden', backgroundColor: '#FAFAFA' },
   imagePreview: { width: '100%', height: 160, resizeMode: 'cover' },
   imagePlaceholder: { height: 120, justifyContent: 'center', alignItems: 'center' },
-  imagePlaceholderIcon: { fontSize: 36, marginBottom: 6 },
   imagePlaceholderText: { color: '#aaa', fontSize: 13 },
   // Dropdown
   dropdownBtn: {

@@ -8,7 +8,7 @@ import { COLORS } from '../constants/theme';
 import { usePartyRoom } from '../hooks/usePartyRoom';
 import { useAuth } from '../context/AuthContext';
 
-// 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
+//  ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function LobbyScreen({ route, navigation }) {
     const { roomId, roomCode, participantId, playerName } = route.params;
     const { user } = useAuth();
@@ -57,16 +57,16 @@ export default function LobbyScreen({ route, navigation }) {
                 <Text style={styles.playerAvatarText}>{item.name.charAt(0).toUpperCase()}</Text>
             </View>
             <Text style={styles.playerName}>{item.name}</Text>
-            {item.user_id === snapshot?.room.host_user_id && <Text style={styles.hostBadge}>👑 Host</Text>}
+            {item.user_id === snapshot?.room.host_user_id && <Text style={styles.hostBadge}>Host</Text>}
             {item.id === participantId && <Text style={styles.youBadge}>You</Text>}
         </View>
     );
 
-    // 🎨 ==========================================
+    //  ==========================================
 
-    // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+    //  ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
 
-    // 🎨 ==========================================
+    //  ==========================================
 
     return (
         <SafeAreaView style={styles.container}>
@@ -84,17 +84,17 @@ export default function LobbyScreen({ route, navigation }) {
                                 <Text style={styles.roomCode}>{roomCode}</Text>
                                 <View style={styles.codeBtnRow}>
                                     <TouchableOpacity style={styles.copyBtn} onPress={handleCopyCode}>
-                                        <Text style={styles.shareBtnText}>📋 Copy</Text>
+                                        <Text style={styles.shareBtnText}>Copy</Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
-                                        <Text style={styles.shareBtnText}>📤 Share</Text>
+                                        <Text style={styles.shareBtnText}>Share</Text>
                                     </TouchableOpacity>
                                 </View>
                             </View>
                             
                             {/* ส่วนเพิ่มเมนูอาหารเอง */}
                             <View style={styles.customFoodCard}>
-                                <Text style={styles.customFoodTitle}>✏️ กำหนดเมนูสุ่มเอง (ตัวเลือกเสริม)</Text>
+                                <Text style={styles.customFoodTitle}>กำหนดเมนูสุ่มเอง (ตัวเลือกเสริม)</Text>
                                 <Text style={styles.customFoodSubtitle}>ถ้ามีเมนูในนี้ ระบบจะสุ่มเฉพาะเมนูนี้เท่านั้น!</Text>
                                 <View style={styles.addFoodRow}>
                                     <TextInput 
@@ -114,7 +114,7 @@ export default function LobbyScreen({ route, navigation }) {
                                             <View key={food.id} style={styles.customFoodBadge}>
                                                 <Text style={styles.customFoodBadgeText}>{food.name}</Text>
                                                 <TouchableOpacity onPress={() => handleRemoveCustomFood(food.id)} disabled={busy}>
-                                                    <Text style={{color: '#E74C3C', marginLeft: 6, fontWeight: 'bold'}}>✕</Text>
+                                                    <Text style={{color: '#E74C3C', marginLeft: 6, fontWeight: 'bold'}}>ลบ</Text>
                                                 </TouchableOpacity>
                                             </View>
                                         ))}
@@ -144,7 +144,7 @@ export default function LobbyScreen({ route, navigation }) {
                     >
                         {isStarting
                             ? <ActivityIndicator color={COLORS.white} />
-                            : <Text style={styles.startBtnText}>🎮 Start Game!</Text>
+                            : <Text style={styles.startBtnText}>Start Game!</Text>
                         }
                     </TouchableOpacity>
                 ) : (

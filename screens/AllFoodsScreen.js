@@ -20,53 +20,53 @@ import { supabase } from '../supabase';
 // Task 4 + Task 3: Category dropdown options
 const CATEGORIES = ['Thai', 'Japanese', 'Western', 'Healthy', 'Fast Food', 'Party', 'อื่นๆ'];
 
-// 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
+//  ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function AllFoodsScreen({ navigation }) {
   const { user } = useAuth();
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [foods, setFoods] = useState([]);
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [loading, setLoading] = useState(true);
 
   // ── Modal: Add Food ─────────────────────────────────────────────────────
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [addModalVisible, setAddModalVisible] = useState(false);
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [newName, setNewName] = useState('');
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [newCategory, setNewCategory] = useState('Thai');
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [newCustomCategory, setNewCustomCategory] = useState('');
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [newPrice, setNewPrice] = useState('');
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [newImageUri, setNewImageUri] = useState(null);
   const [newImageBase64, setNewImageBase64] = useState(null);
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [savingFood, setSavingFood] = useState(false);
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [addCategoryOpen, setAddCategoryOpen] = useState(false);
 
   // ── Modal: Edit Food ─────────────────────────────────────────────────────
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [editModalVisible, setEditModalVisible] = useState(false);
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [editingFood, setEditingFood] = useState(null);
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [editName, setEditName] = useState('');
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [editCategory, setEditCategory] = useState('Thai');
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [editCustomCategory, setEditCustomCategory] = useState('');
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [editPrice, setEditPrice] = useState('');
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [editImageUri, setEditImageUri] = useState(null);
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [editImageBase64, setEditImageBase64] = useState(null);
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [updatingFood, setUpdatingFood] = useState(false);
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [editCategoryOpen, setEditCategoryOpen] = useState(false);
 
   // ── โหลดเมนู ────────────────────────────────────────────────────────────
@@ -85,7 +85,7 @@ export default function AllFoodsScreen({ navigation }) {
     setLoading(false);
   }, [user?.id]);
 
-  // 🔄 useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
+  //  useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
 
   useEffect(() => {
     loadFoods();
@@ -98,8 +98,8 @@ export default function AllFoodsScreen({ navigation }) {
 
   // ── ลบเมนู ──────────────────────────────────────────────────────────────
   const deleteUserFood = (item) => {
-    if (item.source === 'system') { Alert.alert('❌', 'ไม่สามารถลบเมนูของระบบได้'); return; }
-    // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
+    if (item.source === 'system') { Alert.alert('ไม่สามารถลบได้', 'ไม่สามารถลบเมนูของระบบได้'); return; }
+    //  โชว์กล่องข้อความแจ้งเตือนผู้ใช้
     Alert.alert('ลบเมนู', `ต้องการลบ "${item.name}" หรือไม่?`, [
       { text: 'ยกเลิก', style: 'cancel' },
       {
@@ -128,7 +128,7 @@ export default function AllFoodsScreen({ navigation }) {
 
   // ── Task 4: เพิ่มเมนูใหม่ ────────────────────────────────────────────────
   const handleAddFood = async () => {
-    if (!newName.trim()) { Alert.alert('⚠️', 'กรุณากรอกชื่อเมนู'); return; }
+    if (!newName.trim()) { Alert.alert('ข้อมูลไม่ครบ', 'กรุณากรอกชื่อเมนู'); return; }
     if (savingFood) return;
     setSavingFood(true);
     let uploaded;
@@ -149,13 +149,13 @@ export default function AllFoodsScreen({ navigation }) {
       });
 
       if (error) throw error;
-      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
-      Alert.alert('✅', 'เพิ่มเมนูสำเร็จ!');
+      //  โชว์กล่องข้อความแจ้งเตือนผู้ใช้
+      Alert.alert('สำเร็จ', 'เพิ่มเมนูสำเร็จ');
       resetAddForm();
       setAddModalVisible(false);
       loadFoods();
     } catch (err) {
-      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
+      //  โชว์กล่องข้อความแจ้งเตือนผู้ใช้
       await discardUpload(uploaded);
       Alert.alert('Error', err.message);
     } finally {
@@ -184,7 +184,7 @@ export default function AllFoodsScreen({ navigation }) {
 
   // ── Task 4: บันทึกการแก้ไข ───────────────────────────────────────────────
   const handleUpdateFood = async () => {
-    if (!editName.trim()) { Alert.alert('⚠️', 'กรุณากรอกชื่อเมนู'); return; }
+    if (!editName.trim()) { Alert.alert('ข้อมูลไม่ครบ', 'กรุณากรอกชื่อเมนู'); return; }
     if (updatingFood) return;
     setUpdatingFood(true);
     let uploaded;
@@ -217,15 +217,15 @@ export default function AllFoodsScreen({ navigation }) {
         f.id === editingFood.id ? { ...f, ...updatedData } : f
       ));
 
-      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
+      //  โชว์กล่องข้อความแจ้งเตือนผู้ใช้
 
-      Alert.alert('✅', 'แก้ไขเมนูสำเร็จ!');
+      Alert.alert('สำเร็จ', 'แก้ไขเมนูสำเร็จ');
       setEditModalVisible(false);
       loadFoods();
     } catch (err) {
-      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
+      //  โชว์กล่องข้อความแจ้งเตือนผู้ใช้
       await discardUpload(uploaded);
-      Alert.alert('❌ Error', err.message);
+      Alert.alert('เกิดข้อผิดพลาด', err.message);
     } finally {
       setUpdatingFood(false);
     }
@@ -239,12 +239,12 @@ export default function AllFoodsScreen({ navigation }) {
       {item.image_url ? (
         <Image source={{ uri: item.image_url }} style={styles.foodImage} />
       ) : (
-        <Text style={styles.emoji}>{item.emoji || '🍽️'}</Text>
+        <View style={styles.foodFallback}><Text style={styles.foodFallbackText}>{item.name?.charAt(0) || 'J'}</Text></View>
       )}
       <View style={styles.info}>
         <View style={styles.nameRow}>
           <Text style={styles.name}>{item.name}</Text>
-          {item.source === 'custom' && <Text style={styles.customBadge}>⭐ ของคุณ</Text>}
+          {item.source === 'custom' && <Text style={styles.customBadge}>ของคุณ</Text>}
         </View>
         <View style={styles.tagContainer}>
           <Text style={styles.tag}>{item.category}</Text>
@@ -255,10 +255,10 @@ export default function AllFoodsScreen({ navigation }) {
       {item.source === 'custom' && (
         <View style={styles.actionBtns}>
           <TouchableOpacity style={styles.editBtn} onPress={() => openEditModal(item)}>
-            <Text style={styles.editBtnText}>✏️</Text>
+            <Text style={styles.editBtnText}>แก้ไข</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.deleteBtn} onPress={() => deleteUserFood(item)}>
-            <Text style={styles.deleteBtnText}>🗑️</Text>
+            <Text style={styles.deleteBtnText}>ลบ</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -267,11 +267,11 @@ export default function AllFoodsScreen({ navigation }) {
 
   if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={COLORS.primary} /></View>;
 
-  // 🎨 ==========================================
+  //  ==========================================
 
-  // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+  //  ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
 
-  // 🎨 ==========================================
+  //  ==========================================
 
   return (
     <View style={styles.container}>
@@ -296,13 +296,13 @@ export default function AllFoodsScreen({ navigation }) {
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
             <ScrollView keyboardShouldPersistTaps="handled" bounces={false}>
               <View style={styles.modalCard}>
-                <Text style={styles.modalTitle}>➕ เพิ่มเมนูส่วนตัว</Text>
+                <Text style={styles.modalTitle}>เพิ่มเมนูส่วนตัว</Text>
 
                 <Text style={styles.modalLabel}>รูปภาพเมนู</Text>
                 <TouchableOpacity style={styles.imagePicker} onPress={() => pickImage(setNewImageUri, setNewImageBase64)}>
                   {newImageUri
                     ? <Image source={{ uri: newImageUri }} style={styles.imagePreview} />
-                    : <View style={styles.imagePlaceholder}><Text style={{ fontSize: 32 }}>📷</Text><Text style={styles.imagePlaceholderText}>แตะเพื่อเลือกรูป</Text></View>
+                    : <View style={styles.imagePlaceholder}><Text style={styles.imagePlaceholderText}>แตะเพื่อเลือกรูป</Text></View>
                   }
                 </TouchableOpacity>
 
@@ -351,7 +351,7 @@ export default function AllFoodsScreen({ navigation }) {
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
             <ScrollView keyboardShouldPersistTaps="handled" bounces={false}>
               <View style={styles.modalCard}>
-                <Text style={styles.modalTitle}>✏️ แก้ไขเมนู</Text>
+                <Text style={styles.modalTitle}>แก้ไขเมนู</Text>
 
                 <Text style={styles.modalLabel}>รูปภาพเมนู (แตะเพื่อเปลี่ยน)</Text>
                 <TouchableOpacity style={styles.imagePicker} onPress={() => pickImage(setEditImageUri, setEditImageBase64)}>
@@ -359,7 +359,7 @@ export default function AllFoodsScreen({ navigation }) {
                     ? <Image source={{ uri: editImageUri }} style={styles.imagePreview} />
                     : editingFood?.image_url
                       ? <Image source={{ uri: editingFood.image_url }} style={styles.imagePreview} />
-                      : <View style={styles.imagePlaceholder}><Text style={{ fontSize: 32 }}>📷</Text><Text style={styles.imagePlaceholderText}>แตะเพื่อเลือกรูปใหม่</Text></View>
+                      : <View style={styles.imagePlaceholder}><Text style={styles.imagePlaceholderText}>แตะเพื่อเลือกรูปใหม่</Text></View>
                   }
                 </TouchableOpacity>
 
@@ -415,7 +415,8 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
   },
   foodImage: { width: 56, height: 56, borderRadius: 10, marginRight: 14 },
-  emoji: { fontSize: 42, marginRight: 14, width: 56, textAlign: 'center' },
+  foodFallback: { width: 56, height: 56, borderRadius: 10, marginRight: 14, backgroundColor: '#F3E8E0', justifyContent: 'center', alignItems: 'center' },
+  foodFallbackText: { color: COLORS.secondary, fontSize: 24, fontWeight: '900' },
   info: { flex: 1 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   name: { fontSize: 16, fontWeight: 'bold', color: COLORS.textDark, flexShrink: 1 },
@@ -425,9 +426,9 @@ const styles = StyleSheet.create({
   priceTag: { backgroundColor: COLORS.background, color: COLORS.secondary, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, fontSize: 11, fontWeight: 'bold', borderWidth: 1, borderColor: COLORS.secondary, overflow: 'hidden' },
   actionBtns: { flexDirection: 'row', gap: 4 },
   editBtn: { padding: 8 },
-  editBtnText: { fontSize: 18 },
+  editBtnText: { fontSize: 11, color: COLORS.secondary, fontWeight: '700' },
   deleteBtn: { padding: 8 },
-  deleteBtnText: { fontSize: 18 },
+  deleteBtnText: { fontSize: 11, color: '#C0392B', fontWeight: '700' },
   // FAB
   fab: {
     position: 'absolute', bottom: 24, right: 24,

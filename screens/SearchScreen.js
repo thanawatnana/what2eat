@@ -7,16 +7,16 @@ import { COLORS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabase';
 
-// 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
+//  ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function SearchScreen({ navigation }) {
   const { user } = useAuth();
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [query, setQuery] = useState('');
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [results, setResults] = useState([]);
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [loading, setLoading] = useState(false);
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [searched, setSearched] = useState(false);
 
   const doSearch = useCallback(async (text) => {
@@ -38,7 +38,7 @@ export default function SearchScreen({ navigation }) {
     } finally { setLoading(false); }
   }, [user]);
 
-  // 🔄 useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
+  //  useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
 
   useEffect(() => {
     const t = setTimeout(() => doSearch(query), 400);
@@ -47,19 +47,19 @@ export default function SearchScreen({ navigation }) {
 
   const Item = ({ item }) => (
     <View style={styles.item}>
-      <Text style={styles.emoji}>{item.emoji}</Text>
+      <View style={styles.foodInitial}><Text style={styles.foodInitialText}>{item.name?.charAt(0) || 'J'}</Text></View>
       <View style={{ flex: 1 }}>
         <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.meta}>{item.category} • ฿{item.price}{item.src === 'user' ? '  📌' : ''}</Text>
+        <Text style={styles.meta}>{item.category} • ฿{item.price}{item.src === 'user' ? '  ' : ''}</Text>
       </View>
     </View>
   );
 
-  // 🎨 ==========================================
+  //  ==========================================
 
-  // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+  //  ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
 
-  // 🎨 ==========================================
+  //  ==========================================
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -67,7 +67,7 @@ export default function SearchScreen({ navigation }) {
       <View style={styles.header}>
         <TextInput
           style={styles.input}
-          placeholder="🔍 ค้นหาอาหาร..."
+          placeholder=" ค้นหาอาหาร..."
           placeholderTextColor="#bbb"
           value={query}
           onChangeText={setQuery}
@@ -76,7 +76,7 @@ export default function SearchScreen({ navigation }) {
         />
         {query.length > 0 && (
           <TouchableOpacity onPress={() => { setQuery(''); setResults([]); setSearched(false); }} style={styles.clear}>
-            <Text style={{ fontSize: 18, color: '#999' }}>✕</Text>
+            <Text style={styles.clearText}>ล้าง</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -88,15 +88,13 @@ export default function SearchScreen({ navigation }) {
           keyExtractor={item => item.src + item.id}
           renderItem={({ item }) => <Item item={item} />}
           contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 24 }}
-          ListHeaderComponent={searched && results.length > 0 ? <Text style={styles.count}>📋 พบ {results.length} เมนู</Text> : null}
+          ListHeaderComponent={searched && results.length > 0 ? <Text style={styles.count}>พบ {results.length} เมนู</Text> : null}
           ListEmptyComponent={searched ? (
             <View style={styles.center}>
-              <Text style={{ fontSize: 48 }}>😕</Text>
               <Text style={styles.emptyTxt}>ไม่พบ "{query}"</Text>
             </View>
           ) : (
             <View style={styles.center}>
-              <Text style={{ fontSize: 56 }}>🍽</Text>
               <Text style={styles.emptyTxt}>พิมพ์ชื่อเมนูเพื่อค้นหา</Text>
             </View>
           )}
@@ -114,7 +112,9 @@ const styles = StyleSheet.create({
   clear: { width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
   count: { fontSize: 13, color: '#aaa', marginBottom: 10, fontWeight: '600' },
   item: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 10, gap: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 4, elevation: 2, borderWidth: 1, borderColor: '#f0f0f0' },
-  emoji: { fontSize: 36 },
+  foodInitial: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#F3E8E0', justifyContent: 'center', alignItems: 'center' },
+  foodInitialText: { color: COLORS.secondary, fontSize: 20, fontWeight: '900' },
+  clearText: { color: '#777', fontSize: 11, fontWeight: '700' },
   name: { fontSize: 15, fontWeight: '800', color: '#2C3E50' },
   meta: { fontSize: 12, color: '#aaa', marginTop: 3 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80, gap: 12 },

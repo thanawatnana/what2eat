@@ -6,7 +6,7 @@ import {
 import { COLORS } from '../constants/theme';
 import { usePartyRoom } from '../hooks/usePartyRoom';
 
-// 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
+//  ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function SwipeScreen({ route, navigation }) {
     const { roomId, roomCode, playerName } = route.params;
     const { snapshot, error, busy: isSubmitting, act, refresh, leave } = usePartyRoom(roomId, navigation);
@@ -50,9 +50,9 @@ export default function SwipeScreen({ route, navigation }) {
     );
 
     if (currentFoodList.length === 0) {
-        // 🎨 ==========================================
-        // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
-        // 🎨 ==========================================
+        //  ==========================================
+        //  ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+        //  ==========================================
         return (
             <SafeAreaView style={styles.container}>
                 {statusControls}
@@ -62,14 +62,13 @@ export default function SwipeScreen({ route, navigation }) {
     }
 
     if (isDone) {
-        // 🎨 ==========================================
-        // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
-        // 🎨 ==========================================
+        //  ==========================================
+        //  ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+        //  ==========================================
         return (
             <SafeAreaView style={styles.container}>
                 {statusControls}
                 <View style={styles.doneCard}>
-                    <Text style={styles.doneEmoji}>✅</Text>
                     <Text style={styles.doneTitle}>You're done!</Text>
                     <Text style={styles.doneSubtitle}>Waiting for others to finish...</Text>
                     {isSubmitting
@@ -83,11 +82,11 @@ export default function SwipeScreen({ route, navigation }) {
 
     const currentFood = currentFoodList[currentIndex];
 
-    // 🎨 ==========================================
+    //  ==========================================
 
-    // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+    //  ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
 
-    // 🎨 ==========================================
+    //  ==========================================
 
     return (
         <SafeAreaView style={styles.container}>
@@ -105,7 +104,7 @@ export default function SwipeScreen({ route, navigation }) {
                 {currentFood.image_url ? (
                     <Image source={{ uri: currentFood.image_url }} style={styles.foodImage} />
                 ) : (
-                    <Text style={styles.foodEmoji}>{currentFood.emoji || '🍽️'}</Text>
+                    <View style={styles.foodFallback}><Text style={styles.foodFallbackText}>{currentFood.name?.charAt(0) || 'J'}</Text></View>
                 )}
                 <Text style={styles.foodName}>{currentFood.name}</Text>
                 <View style={styles.tagRow}>
@@ -117,12 +116,10 @@ export default function SwipeScreen({ route, navigation }) {
             {/* ปุ่ม Skip / Like */}
             <View style={styles.buttonRow}>
                 <TouchableOpacity style={[styles.swipeBtn, styles.skipBtn]} onPress={handleSkip} disabled={isSubmitting}>
-                    <Text style={styles.swipeBtnIcon}>👎</Text>
                     <Text style={[styles.swipeBtnText, { color: '#E74C3C' }]}>Skip</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={[styles.swipeBtn, styles.likeBtn]} onPress={handleLike} disabled={isSubmitting}>
-                    <Text style={styles.swipeBtnIcon}>👍</Text>
                     <Text style={[styles.swipeBtnText, { color: COLORS.accent }]}>Like!</Text>
                 </TouchableOpacity>
             </View>
@@ -144,7 +141,8 @@ const styles = StyleSheet.create({
         shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 12, elevation: 8,
     },
     foodImage: { width: 150, height: 150, borderRadius: 20, marginBottom: 15 },
-    foodEmoji: { fontSize: 90, marginBottom: 15 },
+    foodFallback: { width: 150, height: 150, borderRadius: 20, marginBottom: 15, backgroundColor: '#F3E8E0', justifyContent: 'center', alignItems: 'center' },
+    foodFallbackText: { color: COLORS.secondary, fontSize: 54, fontWeight: '900' },
     foodName: { fontSize: 26, fontWeight: 'bold', color: COLORS.textDark, textAlign: 'center', marginBottom: 15 },
     tagRow: { flexDirection: 'row', gap: 10 },
     tag: {
@@ -163,14 +161,12 @@ const styles = StyleSheet.create({
     },
     skipBtn: { backgroundColor: COLORS.white, borderWidth: 2, borderColor: '#E74C3C' },
     likeBtn: { backgroundColor: COLORS.white, borderWidth: 2, borderColor: COLORS.accent },
-    swipeBtnIcon: { fontSize: 32, marginBottom: 4 },
     swipeBtnText: { fontSize: 16, fontWeight: 'bold' },
     playerLabel: { marginTop: 20, color: 'gray', fontSize: 13 },
     doneCard: {
         backgroundColor: COLORS.white, padding: 50, borderRadius: 28, alignItems: 'center',
         shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 6,
     },
-    doneEmoji: { fontSize: 70, marginBottom: 15 },
     doneTitle: { fontSize: 28, fontWeight: 'bold', color: COLORS.secondary },
     doneSubtitle: { fontSize: 15, color: 'gray', marginTop: 8 },
 });

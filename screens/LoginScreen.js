@@ -8,32 +8,29 @@ import {
 } from 'react-native';
 import { COLORS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../supabase';
 
 
 // ─── Guest user ID (predefined record in DB) ─────────────────────────────────
 
 
-// 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
+//  ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function LoginScreen({ navigation }) {
     const { login, loginGuest, authError } = useAuth();
-    const [verification, setVerification] = useState(null);
-    const [otp, setOtp] = useState('');
 
-    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+    //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
 
     const [username, setUsername] = useState('');
-    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+    //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [password, setPassword] = useState('');
-    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+    //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [loading, setLoading] = useState(false);
 
     // Task 1: Toggle password visibility
-    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+    //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
     // ─── Per-field & general error states ───────────────────────────────────
-    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+    //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [errors, setErrors] = useState({ username: '', password: '', general: '' });
 
     const clearErrors = () => setErrors({ username: '', password: '', general: '' });
@@ -44,23 +41,6 @@ export default function LoginScreen({ navigation }) {
         clearErrors();
 
         if (loading) return;
-        if (verification) {
-            if (!/^\d{6,8}$/.test(otp.trim())) {
-                setFieldError('general', 'กรุณากรอกรหัสยืนยันจากอีเมลให้ครบ');
-                return;
-            }
-            setLoading(true);
-            try {
-                const { error } = await supabase.auth.verifyOtp({
-                    email: verification, token: otp.trim(), type: 'email',
-                });
-                if (error) throw new Error('รหัสยืนยันไม่ถูกต้องหรือหมดอายุ');
-            } catch (err) {
-                setFieldError('general', `เกิดข้อผิดพลาด: ${err.message}`);
-            } finally { setLoading(false); }
-            return;
-        }
-
         let hasError = false;
         if (!username.trim()) {
             setFieldError('username', 'กรุณากรอก Username');
@@ -75,7 +55,9 @@ export default function LoginScreen({ navigation }) {
         setLoading(true);
         try {
             const result = await login(username.trim(), password);
-            if (result?.verificationRequired) setVerification(result.email);
+            if (result?.verificationRequired) {
+                navigation.replace('VerifyEmail', { email: result.email });
+            }
 
         } catch (err) {
             setFieldError('general', `เกิดข้อผิดพลาด: ${err.message}`);
@@ -99,9 +81,9 @@ export default function LoginScreen({ navigation }) {
     };
 
     // ─── UI ─────────────────────────────────────────────────────────────────
-    // 🎨 ==========================================
-    // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
-    // 🎨 ==========================================
+    //  ==========================================
+    //  ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+    //  ==========================================
     return (
         <SafeAreaView style={styles.safe}>
             <KeyboardAvoidingView
@@ -112,7 +94,7 @@ export default function LoginScreen({ navigation }) {
                     {/* Header */}
                     <Text style={styles.logo}>Joykin</Text>
                     <Text style={styles.title}>เข้าสู่ระบบ</Text>
-                    <Text style={styles.subtitle}>ยินดีต้อนรับกลับมา 👋</Text>
+                    <Text style={styles.subtitle}>ยินดีต้อนรับกลับมา </Text>
 
                     {/* Form Card */}
                     <View style={styles.card}>
@@ -124,11 +106,11 @@ export default function LoginScreen({ navigation }) {
                             placeholder="กรอก Username"
                             placeholderTextColor="#aaa"
                             value={username}
-                            editable={!verification && !loading}
+                            editable={!loading}
                             onChangeText={v => { setUsername(v); setFieldError('username', ''); }}
                             autoCapitalize="none"
                         />
-                        {errors.username ? <Text style={styles.errorText}>⚠️ {errors.username}</Text> : null}
+                        {errors.username ? <Text style={styles.errorText}> {errors.username}</Text> : null}
 
                         {/* ── Password (Task 1: toggle visibility) ── */}
                         <Text style={styles.label}>Password</Text>
@@ -138,7 +120,7 @@ export default function LoginScreen({ navigation }) {
                                 placeholder="กรอก Password"
                                 placeholderTextColor="#aaa"
                                 value={password}
-                                editable={!verification && !loading}
+                                editable={!loading}
                                 onChangeText={v => { setPassword(v); setFieldError('password', ''); }}
                                 secureTextEntry={!isPasswordVisible}
                                 autoCapitalize="none"
@@ -147,17 +129,16 @@ export default function LoginScreen({ navigation }) {
                                 onPress={() => setIsPasswordVisible(v => !v)}
                                 style={styles.eyeBtn}
                             >
-                                <Text style={styles.eyeIcon}>{isPasswordVisible ? '🙈' : '👁️'}</Text>
+                                <Text style={styles.eyeIcon}>{isPasswordVisible ? 'ซ่อน' : 'แสดง'}</Text>
                             </TouchableOpacity>
                         </View>
-                        {errors.password ? <Text style={styles.errorText}>⚠️ {errors.password}</Text> : null}
+                        {errors.password ? <Text style={styles.errorText}> {errors.password}</Text> : null}
 
-                        {verification && <View><Text style={styles.label}>เปิดลิงก์ในอีเมล หรือกรอกรหัสยืนยัน (ถ้ามี)</Text><TextInput style={styles.input} value={otp} onChangeText={setOtp} keyboardType="number-pad" autoComplete="one-time-code" /><TouchableOpacity onPress={() => { setVerification(null); setOtp(''); }}><Text style={styles.link}>กลับไปเข้าสู่ระบบ</Text></TouchableOpacity></View>}
                         {authError ? <Text style={styles.errorText}>{authError}</Text> : null}
                         {/* ── General Error Banner ── */}
                         {errors.general ? (
                             <View style={styles.generalErrorBox}>
-                                <Text style={styles.generalErrorText}>❌ {errors.general}</Text>
+                                <Text style={styles.generalErrorText}> {errors.general}</Text>
                             </View>
                         ) : null}
 
@@ -186,7 +167,7 @@ export default function LoginScreen({ navigation }) {
                             onPress={handleGuest}
                             disabled={loading}
                         >
-                            <Text style={styles.guestBtnText}>👤 ดำเนินการในฐานะ Guest</Text>
+                            <Text style={styles.guestBtnText}>ดำเนินการในฐานะ Guest</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -232,7 +213,7 @@ const styles = StyleSheet.create({
         color: COLORS.textDark, height: 50,
     },
     eyeBtn: { padding: 6 },
-    eyeIcon: { fontSize: 18 },
+    eyeIcon: { fontSize: 11, color: COLORS.secondary, fontWeight: '700' },
     inputError: { borderColor: '#E74C3C', backgroundColor: '#FFF5F5' },
     errorText: { color: '#E74C3C', fontSize: 12, marginTop: 5, marginLeft: 4, fontWeight: '500' },
     generalErrorBox: {

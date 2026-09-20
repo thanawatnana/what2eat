@@ -6,13 +6,13 @@ import {
 import { COLORS } from '../constants/theme';
 import { partyAction } from '../services/party';
 
-// 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
+//  ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function PartyScreen({ navigation }) {
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [playerName, setPlayerName] = useState('');
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [roomCode, setRoomCode] = useState('');
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [isLoading, setIsLoading] = useState(false);
 
   const pending = useRef(false);
@@ -35,17 +35,16 @@ export default function PartyScreen({ navigation }) {
   const handleCreateRoom = () => enterRoom('create');
   const handleJoinRoom = () => enterRoom('join');
 
-  // 🎨 ==========================================
+  //  ==========================================
 
-  // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+  //  ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
 
-  // 🎨 ==========================================
+  //  ==========================================
 
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, justifyContent: 'center' }}>
         <View style={styles.partyCard}>
-          <Text style={styles.partyEmoji}>🏕️</Text>
           <Text style={styles.partyTitle}>Join the Party</Text>
           <Text style={styles.partySubtitle}>Swipe together, eat together!</Text>
 
@@ -66,21 +65,21 @@ export default function PartyScreen({ navigation }) {
             onPress={handleCreateRoom}
             disabled={isLoading}
           >
-            <Text style={styles.partyButtonText}>✨ Create Standard Room (Max 4)</Text>
+            <Text style={styles.partyButtonText}>Create Standard Room (Max 4)</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.partyButton, { backgroundColor: '#FFD700', marginTop: 10 }]}
             onPress={() => {
               Alert.alert(
-                '👑 Joykin Premium Required',
+                ' Joykin Premium Required',
                 'Big Party ยังไม่เปิดให้บริการและยังไม่มีการรับชำระเงิน กรุณาใช้ห้องมาตรฐานสูงสุด 4 คน',
                 [{ text: 'ตกลง' }]
               );
             }}
             disabled={isLoading}
           >
-            <Text style={[styles.partyButtonText, { color: '#8B6508' }]}>👑 Create Big Party (Max 20)</Text>
+            <Text style={[styles.partyButtonText, { color: '#8B6508' }]}>Create Big Party (Max 20)</Text>
           </TouchableOpacity>
 
           <Text style={styles.orText}>- OR -</Text>
@@ -101,7 +100,7 @@ export default function PartyScreen({ navigation }) {
               onPress={handleJoinRoom}
               disabled={isLoading}
             >
-              <Text style={styles.partyButtonText}>🚀 Join</Text>
+              <Text style={styles.partyButtonText}>Join</Text>
             </TouchableOpacity>
           </View>
 
@@ -118,7 +117,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white, marginHorizontal: 20, padding: 30, borderRadius: 24, alignItems: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 6,
   },
-  partyEmoji: { fontSize: 60, marginBottom: 10 },
   partyTitle: { fontSize: 26, fontWeight: 'bold', color: COLORS.secondary },
   partySubtitle: { fontSize: 14, color: 'gray', marginBottom: 25 },
   input: {

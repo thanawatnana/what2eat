@@ -11,20 +11,20 @@ import { COLORS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabase';
 
-// 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
+//  ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function SettingsScreen({ navigation }) {
   const { user, logout, updateUser } = useAuth();
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [avatar, setAvatar] = useState(null);
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [uploading, setUploading] = useState(false);
 
   // Task 5: Editable display name
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [isEditingName, setIsEditingName] = useState(false);
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [editName, setEditName] = useState('');
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [savingName, setSavingName] = useState(false);
 
   useEffect(() => {
@@ -48,7 +48,7 @@ export default function SettingsScreen({ navigation }) {
       if (error || !data?.length) throw new Error('บันทึกโปรไฟล์ไม่สำเร็จ');
       setAvatar(uploaded.url);
       updateUser({ profile_image_url: uploaded.url });
-      Alert.alert('✅', 'อัปโหลดรูปสำเร็จ!');
+      Alert.alert('สำเร็จ', 'อัปโหลดรูปสำเร็จ');
     } catch (err) {
       await discardUpload(uploaded);
       Alert.alert('Error', err.message);
@@ -72,11 +72,11 @@ export default function SettingsScreen({ navigation }) {
   };
 
   const handleChangePhoto = () => {
-    // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
+    //  โชว์กล่องข้อความแจ้งเตือนผู้ใช้
     Alert.alert('เปลี่ยนรูปโปรไฟล์', 'เลือกวิธีเพิ่มรูป', [
       { text: 'ยกเลิก', style: 'cancel' },
-      { text: '📷 ถ่ายรูป', onPress: takePhoto },
-      { text: '🖼️ เลือกจาก Gallery', onPress: pickImage },
+      { text: ' ถ่ายรูป', onPress: takePhoto },
+      { text: ' เลือกจาก Gallery', onPress: pickImage },
     ]);
   };
 
@@ -95,7 +95,7 @@ export default function SettingsScreen({ navigation }) {
   // Task 5: บันทึกชื่อใหม่ → update DB + AuthContext
   const saveEditName = async () => {
     if (savingName || user?.is_guest) return;
-    if (!editName.trim()) { Alert.alert('⚠️', 'กรุณากรอกชื่อที่แสดง'); return; }
+    if (!editName.trim()) { Alert.alert('ข้อมูลไม่ครบ', 'กรุณากรอกชื่อที่แสดง'); return; }
     if (editName.trim() === user?.name_account) { setIsEditingName(false); return; }
 
     setSavingName(true);
@@ -111,10 +111,10 @@ export default function SettingsScreen({ navigation }) {
       // อัปเดต global state โดยไม่ต้อง re-login
       updateUser({ name_account: editName.trim() });
       setIsEditingName(false);
-      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
-      Alert.alert('✅', 'เปลี่ยนชื่อสำเร็จ!');
+      //  โชว์กล่องข้อความแจ้งเตือนผู้ใช้
+      Alert.alert('สำเร็จ', 'เปลี่ยนชื่อสำเร็จ');
     } catch (err) {
-      // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
+      //  โชว์กล่องข้อความแจ้งเตือนผู้ใช้
       Alert.alert('Error', err.message);
     } finally {
       setSavingName(false);
@@ -122,7 +122,7 @@ export default function SettingsScreen({ navigation }) {
   };
 
   const handleLogout = () => {
-    // 🔔 โชว์กล่องข้อความแจ้งเตือนผู้ใช้
+    //  โชว์กล่องข้อความแจ้งเตือนผู้ใช้
     Alert.alert('ออกจากระบบ', 'คุณต้องการออกจากระบบหรือไม่?', [
       { text: 'ยกเลิก', style: 'cancel' },
       {
@@ -136,11 +136,11 @@ export default function SettingsScreen({ navigation }) {
     ]);
   };
 
-  // 🎨 ==========================================
+  //  ==========================================
 
-  // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+  //  ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
 
-  // 🎨 ==========================================
+  //  ==========================================
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -149,7 +149,6 @@ export default function SettingsScreen({ navigation }) {
         {/* Task 1: Guest Warning Banner */}
         {user?.is_guest && (
           <View style={styles.guestWarningBanner}>
-            <Text style={styles.guestWarningIcon}>⚠️</Text>
             <Text style={styles.guestWarningText}>บัญชี Guest ไม่สามารถแก้ไขข้อมูลโปรไฟล์ได้</Text>
           </View>
         )}
@@ -163,7 +162,7 @@ export default function SettingsScreen({ navigation }) {
                 <Image source={{ uri: avatar }} style={styles.avatarImg} />
               ) : (
                 <View style={styles.avatarPlaceholder}>
-                  <Text style={{ fontSize: 52 }}>👤</Text>
+                  <Text style={styles.avatarInitial}>{user?.name_account?.trim()?.charAt(0) || 'J'}</Text>
                 </View>
               )}
               {/* Task 1: ซ่อน camera badge สำหรับ Guest */}
@@ -171,7 +170,7 @@ export default function SettingsScreen({ navigation }) {
                 <View style={styles.editBadge}>
                   {uploading
                     ? <ActivityIndicator size="small" color={COLORS.white} />
-                    : <Text style={styles.editBadgeText}>📷</Text>
+                    : <Text style={styles.editBadgeText}>รูป</Text>
                   }
                 </View>
               )}
@@ -206,10 +205,10 @@ export default function SettingsScreen({ navigation }) {
                 ) : (
                   <>
                     <TouchableOpacity onPress={saveEditName} style={styles.iconBtn}>
-                      <Text style={styles.saveIcon}>✅</Text>
+                      <Text style={styles.actionText}>บันทึก</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={cancelEditName} style={styles.iconBtn}>
-                      <Text style={styles.cancelIcon}>❌</Text>
+                      <Text style={styles.cancelText}>ยกเลิก</Text>
                     </TouchableOpacity>
                   </>
                 )}
@@ -219,7 +218,7 @@ export default function SettingsScreen({ navigation }) {
                 <Text style={styles.infoValue}>{user?.name_account ?? '-'}</Text>
                 {!user?.is_guest && (
                   <TouchableOpacity onPress={startEditName} style={styles.iconBtn}>
-                    <Text style={styles.pencilIcon}>✏️</Text>
+                    <Text style={styles.actionText}>แก้ไข</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -234,7 +233,7 @@ export default function SettingsScreen({ navigation }) {
             <View style={styles.nameReadRow}>
               <Text style={[styles.infoValue, styles.readOnlyValue]}>@{user?.username ?? '-'}</Text>
               <View style={styles.lockBadge}>
-                <Text style={styles.lockText}>🔒</Text>
+                <Text style={styles.lockText}>คงที่</Text>
               </View>
             </View>
           </View>
@@ -242,7 +241,7 @@ export default function SettingsScreen({ navigation }) {
 
         {/* ปุ่ม logout */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <Text style={styles.logoutBtnText}>🚪 ออกจากระบบ</Text>
+          <Text style={styles.logoutBtnText}>ออกจากระบบ</Text>
         </TouchableOpacity>
 
       </ScrollView>
@@ -293,17 +292,16 @@ const styles = StyleSheet.create({
     color: COLORS.textDark, minWidth: 100, maxWidth: 150, backgroundColor: '#FAFAFA',
   },
   iconBtn: { padding: 4 },
-  pencilIcon: { fontSize: 16 },
-  saveIcon: { fontSize: 18 },
-  cancelIcon: { fontSize: 16 },
+  actionText: { fontSize: 11, color: COLORS.secondary, fontWeight: '700' },
+  cancelText: { fontSize: 11, color: '#C0392B', fontWeight: '700' },
   lockBadge: { paddingHorizontal: 6, paddingVertical: 2 },
-  lockText: { fontSize: 14 },
+  lockText: { fontSize: 10, color: '#888', fontWeight: '700' },
   // Task 1: Guest Warning Banner
   guestWarningBanner: {
     width: '100%', flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF3CD',
     borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: '#FFECB5', gap: 10,
   },
-  guestWarningIcon: { fontSize: 20 },
+  avatarInitial: { fontSize: 46, color: COLORS.secondary, fontWeight: '900' },
   guestWarningText: { flex: 1, fontSize: 13, fontWeight: '700', color: '#856404', lineHeight: 18 },
   // Logout
   logoutBtn: { width: '100%', backgroundColor: '#FFF0F0', padding: 16, borderRadius: 14, alignItems: 'center' },

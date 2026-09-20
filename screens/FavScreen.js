@@ -4,12 +4,12 @@ import { COLORS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../supabase';
 
-// 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
+//  ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function FavScreen({ navigation }) {
   const { user } = useAuth();
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [favList, setFavList] = useState([]);
-  // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [loading, setLoading] = useState(true);
 
   const loadFavorites = useCallback(async () => {
@@ -37,7 +37,7 @@ export default function FavScreen({ navigation }) {
     setLoading(false);
   }, [user?.id]);
 
-  // 🔄 useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
+  //  useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', loadFavorites);
@@ -58,25 +58,25 @@ export default function FavScreen({ navigation }) {
       {item.image_url ? (
         <Image source={{ uri: item.image_url }} style={styles.foodImage} />
       ) : (
-        <Text style={styles.emoji}>🍽️</Text>
+        <View style={styles.foodFallback}><Text style={styles.foodFallbackText}>{item.food_name?.charAt(0) || 'J'}</Text></View>
       )}
       <View style={styles.info}>
         <Text style={styles.name}>{item.food_name}</Text>
         <Text style={styles.category}>{item.food_category}</Text>
       </View>
       <TouchableOpacity style={styles.removeBtn} onPress={() => removeFavorite(item.id)}>
-        <Text style={styles.removeBtnText}>❌</Text>
+        <Text style={styles.removeBtnText}>ลบ</Text>
       </TouchableOpacity>
     </View>
   );
 
   if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={COLORS.primary} /></View>;
 
-  // 🎨 ==========================================
+  //  ==========================================
 
-  // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+  //  ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
 
-  // 🎨 ==========================================
+  //  ==========================================
 
   return (
     <View style={styles.container}>
@@ -89,7 +89,6 @@ export default function FavScreen({ navigation }) {
         />
       ) : (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyEmoji}>💔</Text>
           <Text style={styles.emptyText}>ยังไม่มีเมนูโปรด</Text>
           <Text style={styles.emptySubText}>ลองสุ่มเมนูแล้วกดบันทึกดูนะ!</Text>
         </View>
@@ -106,15 +105,15 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white, flexDirection: 'row', padding: 15, borderRadius: 15, marginBottom: 15, alignItems: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3, elevation: 2,
   },
-  emoji: { fontSize: 40, marginRight: 15 },
+  foodFallback: { width: 50, height: 50, borderRadius: 10, marginRight: 15, backgroundColor: '#F3E8E0', justifyContent: 'center', alignItems: 'center' },
+  foodFallbackText: { color: COLORS.secondary, fontSize: 22, fontWeight: '900' },
   foodImage: { width: 50, height: 50, borderRadius: 10, marginRight: 15 },
   info: { flex: 1 },
   name: { fontSize: 17, fontWeight: 'bold', color: COLORS.textDark, marginBottom: 4 },
   category: { fontSize: 13, color: 'gray', fontWeight: '600' },
   removeBtn: { padding: 10 },
-  removeBtnText: { fontSize: 18 },
+  removeBtnText: { fontSize: 12, color: '#C0392B', fontWeight: '700' },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyEmoji: { fontSize: 60, marginBottom: 15 },
   emptyText: { fontSize: 20, fontWeight: 'bold', color: COLORS.secondary },
   emptySubText: { fontSize: 14, color: 'gray', marginTop: 5 },
 });

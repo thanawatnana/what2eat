@@ -1,6 +1,6 @@
 /*
 * ==========================================
-* 🎉 ไฟล์ ResultScreen.js (หน้าสรุปผลการจับคู่)
+*  ไฟล์ ResultScreen.js (หน้าสรุปผลการจับคู่)
 * ==========================================
 * [ไลบรารีที่ใช้]
 * - @supabase/supabase-js : ดึงข้อมูลอาหารที่ชนะจากฐานข้อมูล
@@ -19,21 +19,21 @@ import {
 } from 'react-native';
 import { COLORS } from '../constants/theme';
 
-// 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
+//  ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function ResultScreen({ route, navigation }) {
     const { matchedFoodId, roomCode, customFoods } = route.params;
 
-    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+    //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
 
     const [matchedFoods, setMatchedFoods] = useState([]);
-    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+    //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [loading, setLoading] = useState(true);
 
     // Pop animation
     const scaleAnim = useRef(new Animated.Value(0)).current;
     const bounceAnim = useRef(new Animated.Value(0)).current;
 
-    // 🔄 useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
+    //  useEffect: ฟังก์ชันนี้จะทำงานอัตโนมัติเมื่อหน้านี้ถูกโหลดเปิดขึ้นมา
 
     useEffect(() => {
         const fetchFoods = async () => {
@@ -73,7 +73,7 @@ export default function ResultScreen({ route, navigation }) {
             useNativeDriver: true,
         }).start();
 
-        // Emoji bounce loop
+        // Food initial bounce loop
         Animated.loop(
             Animated.sequence([
                 Animated.timing(bounceAnim, { toValue: -10, duration: 500, useNativeDriver: true }),
@@ -83,19 +83,19 @@ export default function ResultScreen({ route, navigation }) {
     }, [matchedFoodId, customFoods]);
 
     const handlePlayAgain = () => {
-        // 🧭 คำสั่งเปลี่ยนหน้าจอ
+        //  คำสั่งเปลี่ยนหน้าจอ
         navigation.replace('Party');
     };
 
     const handleGoHome = () => {
-        // 🧭 คำสั่งเปลี่ยนหน้าจอ
+        //  คำสั่งเปลี่ยนหน้าจอ
         navigation.popToTop();
     };
 
     if (loading) {
-        // 🎨 ==========================================
-        // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
-        // 🎨 ==========================================
+        //  ==========================================
+        //  ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+        //  ==========================================
         return (
             <SafeAreaView style={[styles.container, { justifyContent: 'center' }]}>
                 <Text style={{color: COLORS.secondary}}>กำลังโหลดผลลัพธ์...</Text>
@@ -105,40 +105,39 @@ export default function ResultScreen({ route, navigation }) {
 
     // กรณีไม่มี match (ไม่มีอาหารที่ทุกคน Like)
     if (matchedFoods.length === 0) {
-        // 🎨 ==========================================
-        // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
-        // 🎨 ==========================================
+        //  ==========================================
+        //  ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+        //  ==========================================
         return (
             <SafeAreaView style={[styles.container, { justifyContent: 'center' }]}>
                 <View style={styles.card}>
-                    <Text style={styles.sadEmoji}>😢</Text>
                     <Text style={styles.noMatchTitle}>No Match Found!</Text>
                     <Text style={styles.noMatchSubtitle}>
                         ไม่มีอาหารที่ทุกคนชอบเลย{'\n'}ลองใหม่อีกครั้งนะ!
                     </Text>
                     <TouchableOpacity style={[styles.btn, { backgroundColor: COLORS.secondary, marginTop: 30 }]} onPress={handlePlayAgain}>
-                        <Text style={styles.btnText}>🔄 Play Again</Text>
+                        <Text style={styles.btnText}>Play Again</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.btn, { backgroundColor: COLORS.accent, marginTop: 12 }]} onPress={handleGoHome}>
-                        <Text style={styles.btnText}>🏠 Home</Text>
+                        <Text style={styles.btnText}>Home</Text>
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>
         );
     }
 
-    // 🎨 ==========================================
+    //  ==========================================
 
-    // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+    //  ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
 
-    // 🎨 ==========================================
+    //  ==========================================
 
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.headerArea}>
                 <Text style={styles.roomLabel}>Room {roomCode}</Text>
                 <Text style={styles.matchLabel}>
-                    {matchedFoods.length > 1 ? `🎉 You all agreed on ${matchedFoods.length} items!` : '🎉 You all agreed on...'}
+                    {matchedFoods.length > 1 ? ` You all agreed on ${matchedFoods.length} items!` : ' You all agreed on...'}
                 </Text>
             </View>
 
@@ -149,8 +148,8 @@ export default function ResultScreen({ route, navigation }) {
                             {food.image_url ? (
                                 <Image source={{ uri: food.image_url }} style={styles.foodImage} />
                             ) : (
-                                <Animated.Text style={[styles.foodEmoji, { transform: [{ translateY: bounceAnim }] }]}>
-                                    {food.emoji || '🍽️'}
+                                <Animated.Text style={[styles.foodInitial, { transform: [{ translateY: bounceAnim }] }]}>
+                                    {food.name?.charAt(0) || 'J'}
                                 </Animated.Text>
                             )}
                             <Text style={styles.foodName}>{food.name}</Text>
@@ -161,18 +160,18 @@ export default function ResultScreen({ route, navigation }) {
                         </Animated.View>
                     ))}
                     <View style={styles.divider} />
-                    <Text style={styles.enjoyText}>Enjoy your meal! 🍽️</Text>
+                    <Text style={styles.enjoyText}>Enjoy your meal! </Text>
                 </ScrollView>
             </View>
 
             {/* Action buttons */}
             <View style={styles.actionArea}>
                 <TouchableOpacity style={[styles.btn, { backgroundColor: COLORS.primary }]} onPress={handlePlayAgain}>
-                    <Text style={styles.btnText}>🔄 Play Again</Text>
+                    <Text style={styles.btnText}>Play Again</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity style={[styles.btn, { backgroundColor: COLORS.secondary, marginTop: 12 }]} onPress={handleGoHome}>
-                    <Text style={styles.btnText}>🏠 Back to Home</Text>
+                    <Text style={styles.btnText}>Back to Home</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>
@@ -196,7 +195,7 @@ const styles = StyleSheet.create({
         shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 16, elevation: 10,
     },
     foodImage: { width: 160, height: 160, borderRadius: 20, marginBottom: 15 },
-    foodEmoji: { fontSize: 100, marginBottom: 15 },
+    foodInitial: { width: 160, height: 160, borderRadius: 20, marginBottom: 15, backgroundColor: '#F3E8E0', color: COLORS.secondary, fontSize: 64, fontWeight: '900', textAlign: 'center', textAlignVertical: 'center', paddingTop: 38 },
     foodName: { fontSize: 28, fontWeight: 'bold', color: COLORS.textDark, textAlign: 'center', marginBottom: 15 },
     tagRow: { flexDirection: 'row', gap: 10 },
     tag: {
@@ -212,7 +211,6 @@ const styles = StyleSheet.create({
     enjoyText: { fontSize: 16, color: 'gray', fontWeight: 'bold', fontStyle: 'italic', marginBottom: 20 },
     btn: { width: '100%', paddingVertical: 18, borderRadius: 20, alignItems: 'center' },
     btnText: { color: COLORS.white, fontSize: 18, fontWeight: 'bold' },
-    sadEmoji: { fontSize: 80, marginBottom: 20 },
     noMatchTitle: { fontSize: 26, fontWeight: 'bold', color: '#E74C3C', marginBottom: 10 },
     noMatchSubtitle: { fontSize: 16, color: 'gray', textAlign: 'center', lineHeight: 24 },
 });

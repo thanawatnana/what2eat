@@ -1,8 +1,6 @@
 import { useState } from 'react';
-import * as Linking from 'expo-linking';
 import {
     ActivityIndicator,
-    Alert,
     KeyboardAvoidingView, Platform,
     SafeAreaView, ScrollView,
     StyleSheet, Text,
@@ -10,35 +8,32 @@ import {
     View,
 } from 'react-native';
 import { COLORS } from '../constants/theme';
-import { supabase } from '../supabase';
+import { useAuth } from '../context/AuthContext';
 
 
-// ─── Email Regex (requires real TLD, e.g. .com .net .th) ─────────────────────
-// Fix 1: รับเฉพาะ @gmail.com เท่านั้น (ป้องกัน @gmai.com, @gmail.ckm ฯลฯ)
-const EMAIL_REGEX = /^[^\s@]+@gmail\.com$/i;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
 
 
-// 🧩 ฟังก์ชันหลักของหน้าจอนี้ (Component)
+//  ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function RegisterScreen({ navigation }) {
-    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+    const { register } = useAuth();
+    //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [nameAccount, setNameAccount] = useState('');
-    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+    //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [username, setUsername] = useState('');
-    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+    //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [email, setEmail] = useState('');
-    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+    //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [password, setPassword] = useState('');
-    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+    //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [loading, setLoading] = useState(false);
-    const [verification, setVerification] = useState(false);
-    const [otp, setOtp] = useState('');
 
     // Task 1: Toggle password visibility
-    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+    //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
     // ─── Per-field error states ──────────────────────────────────────────────
-    // 📦 สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+    //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
     const [errors, setErrors] = useState({
         nameAccount: '',
         username: '',
@@ -66,8 +61,8 @@ export default function RegisterScreen({ navigation }) {
             next.username = 'Username ต้องเป็น a-z, 0-9, _, . หรือ - จำนวน 3–30 ตัว';
             valid = false;
         }
-        if (!EMAIL_REGEX.test(email.trim())) {
-            next.email = 'รูปแบบ Email ไม่ถูกต้อง เช่น example@gmail.com';
+        if (email.trim() && !EMAIL_REGEX.test(email.trim())) {
+            next.email = 'รูปแบบ Email ไม่ถูกต้อง เช่น example@email.com';
             valid = false;
         }
         const passwordBytes = encodeURIComponent(password).replace(/%[A-F0-9]{2}/g, 'x').length;
@@ -83,33 +78,19 @@ export default function RegisterScreen({ navigation }) {
     // ─── Register Handler ────────────────────────────────────────────────────
     const handleRegister = async () => {
         clearErrors();
-        if (loading || (!verification && !validate())) return;
-
-        if (verification && !/^\d{6,8}$/.test(otp.trim())) {
-            setFieldError('general', 'กรุณากรอกรหัสยืนยันจากอีเมลให้ครบ');
-            return;
-        }
+        if (loading || !validate()) return;
 
         setLoading(true);
         try {
-            if (verification) {
-                const { error } = await supabase.auth.verifyOtp({ email: email.trim().toLowerCase(), token: otp.trim(), type: 'email' });
-                if (error) throw new Error('รหัสยืนยันไม่ถูกต้องหรือหมดอายุ');
-            } else {
-                const { data, error } = await supabase.auth.signUp({
-                    email: email.trim().toLowerCase(), password,
-                    options: {
-                        emailRedirectTo: Linking.createURL('auth/callback'),
-                        data: { username: username.trim().toLowerCase(), name_account: nameAccount.trim() },
-                    },
-                });
-                if (error) throw new Error('สมัครไม่สำเร็จ กรุณาตรวจข้อมูลหรือใช้ชื่อผู้ใช้อื่น');
-                if (!data.session) {
-                    setVerification(true);
-                    Alert.alert('ยืนยันอีเมล', 'กรุณาเปิดลิงก์ยืนยันในอีเมล หากอีเมลแสดงรหัสก็สามารถกรอกด้านล่างได้');
-                }
+            const result = await register({
+                nameAccount: nameAccount.trim(),
+                username: username.trim().toLowerCase(),
+                email: email.trim().toLowerCase(),
+                password,
+            });
+            if (result?.verificationRequired) {
+                navigation.replace('VerifyEmail', { email: result.email });
             }
-
         } catch (err) {
             setFieldError('general', `เกิดข้อผิดพลาด: ${err.message}`);
         } finally {
@@ -117,11 +98,11 @@ export default function RegisterScreen({ navigation }) {
         }
     };
 
-    // 🎨 ==========================================
+    //  ==========================================
 
-    // 🎨 ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
+    //  ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
 
-    // 🎨 ==========================================
+    //  ==========================================
 
     return (
         <SafeAreaView style={styles.safe}>
@@ -153,7 +134,7 @@ export default function RegisterScreen({ navigation }) {
                             onChangeText={v => { setNameAccount(v); setFieldError('nameAccount', ''); }}
                             autoCapitalize="words"
                         />
-                        {errors.nameAccount ? <Text style={styles.errorText}>⚠️ {errors.nameAccount}</Text> : null}
+                        {errors.nameAccount ? <Text style={styles.errorText}> {errors.nameAccount}</Text> : null}
 
                         {/* ── Username ── */}
                         <Text style={styles.label}>Username</Text>
@@ -165,20 +146,20 @@ export default function RegisterScreen({ navigation }) {
                             onChangeText={v => { setUsername(v); setFieldError('username', ''); }}
                             autoCapitalize="none"
                         />
-                        {errors.username ? <Text style={styles.errorText}>⚠️ {errors.username}</Text> : null}
+                        {errors.username ? <Text style={styles.errorText}> {errors.username}</Text> : null}
 
                         {/* ── Email ── */}
-                        <Text style={styles.label}>Email</Text>
+                        <Text style={styles.label}>Email (ไม่บังคับ)</Text>
                         <TextInput
                             style={[styles.input, errors.email ? styles.inputError : null]}
-                            placeholder="example@gmail.com"
+                            placeholder="เว้นว่างได้ หรือกรอก example@email.com"
                             placeholderTextColor="#aaa"
                             value={email}
                             onChangeText={v => { setEmail(v); setFieldError('email', ''); }}
                             keyboardType="email-address"
                             autoCapitalize="none"
                         />
-                        {errors.email ? <Text style={styles.errorText}>⚠️ {errors.email}</Text> : null}
+                        {errors.email ? <Text style={styles.errorText}> {errors.email}</Text> : null}
 
                         {/* ── Password (Task 1: toggle visibility) ── */}
                         <Text style={styles.label}>Password</Text>
@@ -196,19 +177,18 @@ export default function RegisterScreen({ navigation }) {
                                 onPress={() => setIsPasswordVisible(v => !v)}
                                 style={styles.eyeBtn}
                             >
-                                <Text style={styles.eyeIcon}>{isPasswordVisible ? '🙈' : '👁️'}</Text>
+                                <Text style={styles.eyeIcon}>{isPasswordVisible ? 'ซ่อน' : 'แสดง'}</Text>
                             </TouchableOpacity>
                         </View>
-                        {errors.password ? <Text style={styles.errorText}>⚠️ {errors.password}</Text> : null}
+                        {errors.password ? <Text style={styles.errorText}> {errors.password}</Text> : null}
 
                         {/* ── General Error ── */}
                         {errors.general ? (
                             <View style={styles.generalErrorBox}>
-                                <Text style={styles.generalErrorText}>❌ {errors.general}</Text>
+                                <Text style={styles.generalErrorText}> {errors.general}</Text>
                             </View>
                         ) : null}
 
-                        {verification && <><Text style={styles.label}>เปิดลิงก์ในอีเมล หรือกรอกรหัสยืนยัน (ถ้ามี)</Text><TextInput style={styles.input} value={otp} onChangeText={setOtp} keyboardType="number-pad" autoComplete="one-time-code" /></>}
                         {/* ── Submit ── */}
                         <TouchableOpacity
                             style={[styles.btn, loading && styles.btnDisabled]}
@@ -266,7 +246,7 @@ const styles = StyleSheet.create({
         color: COLORS.textDark, height: 50,
     },
     eyeBtn: { padding: 6 },
-    eyeIcon: { fontSize: 18 },
+    eyeIcon: { fontSize: 11, color: COLORS.secondary, fontWeight: '700' },
     inputError: { borderColor: '#E74C3C', backgroundColor: '#FFF5F5' },
     errorText: { color: '#E74C3C', fontSize: 12, marginTop: 5, marginLeft: 4, fontWeight: '500' },
     generalErrorBox: {

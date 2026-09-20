@@ -1,8 +1,14 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
+const root = dirname(fileURLToPath(new URL('../package.json', import.meta.url)));
+const walkJs = path => statSync(path).isDirectory()
+  ? readdirSync(path).flatMap(name => walkJs(join(path, name)))
+  : path.endsWith('.js') ? [path] : [];
 
 test('password hashes are not accessed by application screens', () => {
   const files = ['context/AuthContext.js', 'screens/LoginScreen.js', 'screens/RegisterScreen.js'];
@@ -34,10 +40,24 @@ test('image uploads require base64 and an owner folder', () => {
   assert.doesNotMatch(source, /upsert: true/);
 });
 
-test('mobile auth callback URLs use expo-linking', () => {
-  for (const file of ['context/AuthContext.js', 'screens/RegisterScreen.js']) {
-    const source = read(file);
-    assert.match(source, /import \* as Linking from ['"]expo-linking['"]/);
-    assert.doesNotMatch(source, /import\s*\{[^}]*\bLinking\b[^}]*\}\s*from ['"]react-native['"]/s);
+test('registration uses a dedicated email PIN screen and gates profile creation', () => {
+  assert.match(read('screens/RegisterScreen.js'), /Email \(ไม่บังคับ\)/);
+  assert.match(read('screens/RegisterScreen.js'), /replace\(['"]VerifyEmail['"]/);
+  assert.match(read('screens/VerifyEmailScreen.js'), /verifyOtp\([\s\S]*type:\s*['"]email['"]/);
+  assert.match(read('screens/VerifyEmailScreen.js'), /resend\(\{\s*type:\s*['"]signup['"]/);
+  assert.match(read('context/AuthContext.js'), /account-register/);
+  assert.doesNotMatch(read('context/AuthContext.js'), /createURL|ConfirmationURL/);
+  assert.match(read('database/registration_otp.sql'), /email_confirmed_at is null/);
+  assert.match(read('database/registration_otp.sql'), /after insert or update of email_confirmed_at/i);
+  assert.match(read('supabase/functions/account-register/index.ts'), /email_confirm:\s*true/);
+  assert.match(read('supabase/templates/confirmation.html'), /\{\{ \.Token \}\}/);
+  assert.doesNotMatch(read('supabase/templates/confirmation.html'), /ConfirmationURL/);
+});
+
+test('application source contains no emoji characters', () => {
+  const targets = ['App.js', 'screens', 'context', 'services', 'hooks', 'utils', 'data'];
+  const files = targets.flatMap(target => walkJs(join(root, target)));
+  for (const file of files) {
+    assert.doesNotMatch(readFileSync(file, 'utf8'), /[\u{1F000}-\u{1FAFF}\u2600-\u27BF\uFE0F]/u, file);
   }
 });

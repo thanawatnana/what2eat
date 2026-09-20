@@ -12,20 +12,6 @@ const generic = 'ชื่อผู้ใช้หรือรหัสผ่า
 const reply = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers });
 const options = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } };
-const safeRedirect = (raw: unknown) => {
-  if (typeof raw !== 'string') return 'joykin://auth/callback';
-  try {
-    const url = new URL(raw);
-    if (url.protocol === 'joykin:' && url.hostname === 'auth' && url.pathname === '/callback') return raw;
-    const host = url.hostname.replace(/^\[|\]$/g, '');
-    const local = host === 'localhost' || host === '127.0.0.1' || host === '::1' ||
-      /^10\./.test(host) || /^192\.168\./.test(host) ||
-      /^172\.(1[6-9]|2\d|3[01])\./.test(host);
-    if (url.protocol === 'exp:' && local && /\/(?:--\/)?auth\/callback$/.test(url.pathname)) return raw;
-  } catch { /* fallback below */ }
-  return 'joykin://auth/callback';
-};
-
 // The password authenticates this public endpoint. Service credentials and
 // legacy hashes stay on the server and are never logged or returned.
 Deno.serve(async (request) => {
@@ -50,8 +36,6 @@ Deno.serve(async (request) => {
     if (!identifier || identifier.length > 255 || !password || new TextEncoder().encode(password).length > 72) {
       return reject();
     }
-    const redirectUrl = safeRedirect(body.redirectUrl);
-
     const url = Deno.env.get('SUPABASE_URL')!;
     const admin = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, options);
     const auth = createClient(url, Deno.env.get('SUPABASE_ANON_KEY')!, options);
@@ -84,10 +68,7 @@ Deno.serve(async (request) => {
 
     const { data, error: signInError } = await auth.auth.signInWithPassword({ email: profile.email, password });
     if (signInError?.code === 'email_not_confirmed') {
-      const { error: otpError } = await auth.auth.signInWithOtp({
-        email: profile.email,
-        options: { shouldCreateUser: false, emailRedirectTo: redirectUrl },
-      });
+      const { error: otpError } = await auth.auth.resend({ type: 'signup', email: profile.email });
       if (otpError) return reply({ error: 'ส่งอีเมลยืนยันไม่สำเร็จ กรุณารอสักครู่แล้วลองใหม่' }, 429);
       return reply({ verificationRequired: true, email: profile.email });
     }

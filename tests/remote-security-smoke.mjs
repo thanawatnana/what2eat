@@ -21,4 +21,17 @@ const response = await fetch(`${SUPABASE_URL}/functions/v1/account-login`, {
 assert.equal(response.status, 401);
 const body = await response.json();
 assert.equal(body.error, 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+
+const registerResponse = await fetch(`${SUPABASE_URL}/functions/v1/account-register`, {
+  method: 'POST',
+  headers: { apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    username: '__security_smoke__',
+    nameAccount: 'Security Smoke',
+    password: 'short',
+  }),
+});
+assert.equal(registerResponse.status, 400);
+const registerBody = await registerResponse.json();
+assert.equal(registerBody.error, 'ข้อมูลสมัครสมาชิกไม่ถูกต้อง');
 console.log('Remote security smoke passed');
