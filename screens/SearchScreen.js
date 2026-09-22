@@ -63,7 +63,7 @@ export default function SearchScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
       <View style={styles.header}>
         <TextInput
           style={styles.input}
@@ -105,13 +105,13 @@ export default function SearchScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#fff' },
+  safe: { flex: 1, backgroundColor: COLORS.background },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0', gap: 10 },
   back: { width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
-  input: { flex: 1, backgroundColor: '#F7F7F7', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, color: '#2C3E50', borderWidth: 1, borderColor: '#EBEBEB' },
+  input: { flex: 1, backgroundColor: COLORS.surface, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, color: COLORS.textDark, borderWidth: 1, borderColor: COLORS.border },
   clear: { width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
   count: { fontSize: 13, color: '#aaa', marginBottom: 10, fontWeight: '600' },
-  item: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 10, gap: 14, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 4, elevation: 2, borderWidth: 1, borderColor: '#f0f0f0' },
+  item: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.surface, borderRadius: 16, padding: 14, marginBottom: 10, gap: 14, shadowColor: COLORS.secondary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2, borderWidth: 1, borderColor: COLORS.border },
   foodInitial: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#F3E8E0', justifyContent: 'center', alignItems: 'center' },
   foodInitialText: { color: COLORS.secondary, fontSize: 20, fontWeight: '900' },
   clearText: { color: '#777', fontSize: 11, fontWeight: '700' },

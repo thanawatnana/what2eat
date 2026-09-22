@@ -1,12 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-    StyleSheet, Text, View, FlatList, TouchableOpacity,
-    SafeAreaView, ActivityIndicator, Alert, Share, TextInput, KeyboardAvoidingView, Platform
-} from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import { useEffect, useRef, useState } from 'react';
+import {
+    ActivityIndicator, Alert,
+    FlatList,
+    KeyboardAvoidingView, Platform,
+    SafeAreaView,
+    Share,
+    StyleSheet, Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from 'react-native';
 import { COLORS } from '../constants/theme';
-import { usePartyRoom } from '../hooks/usePartyRoom';
 import { useAuth } from '../context/AuthContext';
+import { usePartyRoom } from '../hooks/usePartyRoom';
 
 //  ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function LobbyScreen({ route, navigation }) {

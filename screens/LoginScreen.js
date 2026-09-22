@@ -1,242 +1,217 @@
 import { useState } from 'react';
 import {
-    ActivityIndicator, KeyboardAvoidingView, Platform,
-    SafeAreaView,
-    StyleSheet, Text,
-    TextInput, TouchableOpacity,
-    View
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { COLORS } from '../constants/theme';
+import AuthLayout from '../components/AuthLayout';
+import { COLORS, RADIUS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 
-
-// ─── Guest user ID (predefined record in DB) ─────────────────────────────────
-
-
-//  ฟังก์ชันหลักของหน้าจอนี้ (Component)
 export default function LoginScreen({ navigation }) {
-    const { login, loginGuest, authError } = useAuth();
+  const { login, loginGuest, authError } = useAuth();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [errors, setErrors] = useState({ username: '', password: '', general: '' });
 
-    //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
+  const setFieldError = (field, message) => {
+    setErrors((current) => ({ ...current, [field]: message }));
+  };
 
-    const [username, setUsername] = useState('');
-    //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
-    const [password, setPassword] = useState('');
-    //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
-    const [loading, setLoading] = useState(false);
+  const clearErrors = () => setErrors({ username: '', password: '', general: '' });
 
-    // Task 1: Toggle password visibility
-    //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
-    const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const handleLogin = async () => {
+    clearErrors();
+    if (loading) return;
 
-    // ─── Per-field & general error states ───────────────────────────────────
-    //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
-    const [errors, setErrors] = useState({ username: '', password: '', general: '' });
-
-    const clearErrors = () => setErrors({ username: '', password: '', general: '' });
-    const setFieldError = (field, msg) => setErrors(prev => ({ ...prev, [field]: msg }));
-
-    // ─── Login Handler ───────────────────────────────────────────────────────
-    const handleLogin = async () => {
-        clearErrors();
-
-        if (loading) return;
-        let hasError = false;
-        if (!username.trim()) {
-            setFieldError('username', 'กรุณากรอก Username');
-            hasError = true;
-        }
-        if (!password) {
-            setFieldError('password', 'กรุณากรอก Password');
-            hasError = true;
-        }
-        if (hasError) return;
-
-        setLoading(true);
-        try {
-            const result = await login(username.trim(), password);
-            if (result?.verificationRequired) {
-                navigation.replace('VerifyEmail', { email: result.email });
-            }
-
-        } catch (err) {
-            setFieldError('general', `เกิดข้อผิดพลาด: ${err.message}`);
-        } finally {
-            setLoading(false);
-        }
+    const nextErrors = {
+      username: username.trim() ? '' : 'กรุณากรอก Username',
+      password: password ? '' : 'กรุณากรอก Password',
+      general: '',
     };
+    if (nextErrors.username || nextErrors.password) {
+      setErrors(nextErrors);
+      return;
+    }
 
-    // ─── Guest Handler ───────────────────────────────────────────────────────
-    const handleGuest = async () => {
-        clearErrors();
-        setLoading(true);
-        try {
-            await loginGuest();
+    setLoading(true);
+    try {
+      const result = await login(username.trim(), password);
+      if (result?.verificationRequired) {
+        navigation.replace('VerifyEmail', { email: result.email });
+      }
+    } catch (error) {
+      setFieldError('general', error.message || 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        } catch (err) {
-            setFieldError('general', `เกิดข้อผิดพลาด: ${err.message}`);
-        } finally {
-            setLoading(false);
-        }
-    };
+  const handleGuest = async () => {
+    clearErrors();
+    if (loading) return;
+    setLoading(true);
+    try {
+      await loginGuest();
+    } catch (error) {
+      setFieldError('general', error.message || 'เข้าใช้งานแบบ Guest ไม่สำเร็จ');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    // ─── UI ─────────────────────────────────────────────────────────────────
-    //  ==========================================
-    //  ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
-    //  ==========================================
-    return (
-        <SafeAreaView style={styles.safe}>
-            <KeyboardAvoidingView
-                style={{ flex: 1 }}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            >
-                <View style={styles.container}>
-                    {/* Header */}
-                    <Text style={styles.logo}>Joykin</Text>
-                    <Text style={styles.title}>เข้าสู่ระบบ</Text>
-                    <Text style={styles.subtitle}>ยินดีต้อนรับกลับมา </Text>
+  return (
+    <AuthLayout
+      title="ยินดีต้อนรับกลับ"
+      subtitle="เข้าสู่ระบบเพื่อค้นหาและสุ่มเมนูที่ใช่สำหรับคุณ"
+      footer={(
+        <View style={styles.footerRow}>
+          <Text style={styles.footerText}>ยังไม่มีบัญชี?</Text>
+          <TouchableOpacity onPress={() => navigation.replace('Register')} accessibilityRole="button">
+            <Text style={styles.link}>สมัครสมาชิก</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    >
+      <Text style={styles.label}>Username</Text>
+      <TextInput
+        style={[styles.input, errors.username ? styles.inputError : null]}
+        placeholder="กรอก Username"
+        placeholderTextColor={COLORS.textLight}
+        value={username}
+        editable={!loading}
+        onChangeText={(value) => {
+          setUsername(value);
+          setFieldError('username', '');
+        }}
+        autoCapitalize="none"
+        autoCorrect={false}
+        returnKeyType="next"
+      />
+      {errors.username ? <Text style={styles.errorText}>{errors.username}</Text> : null}
 
-                    {/* Form Card */}
-                    <View style={styles.card}>
+      <Text style={styles.label}>Password</Text>
+      <View style={[styles.inputRow, errors.password ? styles.inputError : null]}>
+        <TextInput
+          style={styles.inputInner}
+          placeholder="กรอก Password"
+          placeholderTextColor={COLORS.textLight}
+          value={password}
+          editable={!loading}
+          onChangeText={(value) => {
+            setPassword(value);
+            setFieldError('password', '');
+          }}
+          secureTextEntry={!isPasswordVisible}
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="done"
+          onSubmitEditing={handleLogin}
+        />
+        <TouchableOpacity
+          onPress={() => setIsPasswordVisible((current) => !current)}
+          style={styles.visibilityButton}
+          accessibilityRole="button"
+        >
+          <Text style={styles.visibilityText}>{isPasswordVisible ? 'ซ่อน' : 'แสดง'}</Text>
+        </TouchableOpacity>
+      </View>
+      {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
 
-                        {/* ── Username ── */}
-                        <Text style={styles.label}>Username</Text>
-                        <TextInput
-                            style={[styles.input, errors.username ? styles.inputError : null]}
-                            placeholder="กรอก Username"
-                            placeholderTextColor="#aaa"
-                            value={username}
-                            editable={!loading}
-                            onChangeText={v => { setUsername(v); setFieldError('username', ''); }}
-                            autoCapitalize="none"
-                        />
-                        {errors.username ? <Text style={styles.errorText}> {errors.username}</Text> : null}
+      {authError || errors.general ? (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorBoxText}>{errors.general || authError}</Text>
+        </View>
+      ) : null}
 
-                        {/* ── Password (Task 1: toggle visibility) ── */}
-                        <Text style={styles.label}>Password</Text>
-                        <View style={[styles.inputRow, errors.password ? styles.inputError : null]}>
-                            <TextInput
-                                style={styles.inputInner}
-                                placeholder="กรอก Password"
-                                placeholderTextColor="#aaa"
-                                value={password}
-                                editable={!loading}
-                                onChangeText={v => { setPassword(v); setFieldError('password', ''); }}
-                                secureTextEntry={!isPasswordVisible}
-                                autoCapitalize="none"
-                            />
-                            <TouchableOpacity
-                                onPress={() => setIsPasswordVisible(v => !v)}
-                                style={styles.eyeBtn}
-                            >
-                                <Text style={styles.eyeIcon}>{isPasswordVisible ? 'ซ่อน' : 'แสดง'}</Text>
-                            </TouchableOpacity>
-                        </View>
-                        {errors.password ? <Text style={styles.errorText}> {errors.password}</Text> : null}
+      <TouchableOpacity
+        style={[styles.primaryButton, loading && styles.disabled]}
+        onPress={handleLogin}
+        disabled={loading}
+        accessibilityRole="button"
+      >
+        {loading
+          ? <ActivityIndicator color={COLORS.white} />
+          : <Text style={styles.primaryText}>เข้าสู่ระบบ</Text>}
+      </TouchableOpacity>
 
-                        {authError ? <Text style={styles.errorText}>{authError}</Text> : null}
-                        {/* ── General Error Banner ── */}
-                        {errors.general ? (
-                            <View style={styles.generalErrorBox}>
-                                <Text style={styles.generalErrorText}> {errors.general}</Text>
-                            </View>
-                        ) : null}
+      <View style={styles.dividerRow}>
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>หรือ</Text>
+        <View style={styles.dividerLine} />
+      </View>
 
-                        {/* ── Login Button ── */}
-                        <TouchableOpacity
-                            style={[styles.btn, loading && styles.btnDisabled]}
-                            onPress={handleLogin}
-                            disabled={loading}
-                        >
-                            {loading
-                                ? <ActivityIndicator color={COLORS.white} />
-                                : <Text style={styles.btnText}>เข้าสู่ระบบ</Text>
-                            }
-                        </TouchableOpacity>
-
-                        {/* ── Divider ── */}
-                        <View style={styles.dividerRow}>
-                            <View style={styles.dividerLine} />
-                            <Text style={styles.dividerText}>หรือ</Text>
-                            <View style={styles.dividerLine} />
-                        </View>
-
-                        {/* ── Guest Button ── */}
-                        <TouchableOpacity
-                            style={[styles.guestBtn, loading && styles.btnDisabled]}
-                            onPress={handleGuest}
-                            disabled={loading}
-                        >
-                            <Text style={styles.guestBtnText}>ดำเนินการในฐานะ Guest</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* Footer */}
-                    <View style={styles.footer}>
-                        <Text style={styles.footerText}>ยังไม่มีบัญชี? </Text>
-                        <TouchableOpacity onPress={() => navigation.replace('Register')}>
-                            <Text style={styles.link}>สมัครสมาชิก</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </KeyboardAvoidingView>
-        </SafeAreaView>
-    );
+      <TouchableOpacity
+        style={[styles.guestButton, loading && styles.disabled]}
+        onPress={handleGuest}
+        disabled={loading}
+        accessibilityRole="button"
+      >
+        <Text style={styles.guestText}>ใช้งานแบบ Guest</Text>
+      </TouchableOpacity>
+      <Text style={styles.guestHint}>ทดลองใช้งานได้ทันทีโดยไม่ต้องสร้างบัญชี</Text>
+    </AuthLayout>
+  );
 }
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-    safe: { flex: 1, backgroundColor: COLORS.background },
-    container: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
-    logo: { fontSize: 42, fontWeight: '900', color: COLORS.secondary, letterSpacing: 1 },
-    title: { fontSize: 28, fontWeight: '700', color: COLORS.textDark, marginTop: 6 },
-    subtitle: { fontSize: 14, color: COLORS.textDark, opacity: 0.55, marginBottom: 28, marginTop: 4 },
-    card: {
-        width: '100%', backgroundColor: COLORS.white, borderRadius: 24,
-        padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.12, shadowRadius: 12, elevation: 8,
-    },
-    label: { fontSize: 13, fontWeight: '600', color: COLORS.textDark, marginBottom: 6, marginTop: 14 },
-    input: {
-        borderWidth: 1.5, borderColor: '#ddd', borderRadius: 12,
-        paddingHorizontal: 14, paddingVertical: 11, fontSize: 15,
-        color: COLORS.textDark, backgroundColor: '#FAFAFA',
-    },
-    // Task 1: Row สำหรับ input + eye icon (Fix 2: height คงที่ป้องกัน layout shift)
-    inputRow: {
-        flexDirection: 'row', alignItems: 'center',
-        borderWidth: 1.5, borderColor: '#ddd', borderRadius: 12,
-        backgroundColor: '#FAFAFA', paddingRight: 8, height: 50,
-    },
-    inputInner: {
-        flex: 1, paddingHorizontal: 14, fontSize: 15,
-        color: COLORS.textDark, height: 50,
-    },
-    eyeBtn: { padding: 6 },
-    eyeIcon: { fontSize: 11, color: COLORS.secondary, fontWeight: '700' },
-    inputError: { borderColor: '#E74C3C', backgroundColor: '#FFF5F5' },
-    errorText: { color: '#E74C3C', fontSize: 12, marginTop: 5, marginLeft: 4, fontWeight: '500' },
-    generalErrorBox: {
-        marginTop: 16, backgroundColor: '#FFF0F0', borderRadius: 10,
-        padding: 12, borderLeftWidth: 4, borderLeftColor: '#E74C3C',
-    },
-    generalErrorText: { color: '#C0392B', fontSize: 13, fontWeight: '500' },
-    btn: {
-        marginTop: 24, backgroundColor: COLORS.secondary,
-        borderRadius: 14, paddingVertical: 14, alignItems: 'center',
-    },
-    btnDisabled: { opacity: 0.6 },
-    btnText: { color: COLORS.white, fontSize: 16, fontWeight: '700' },
-    dividerRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 16 },
-    dividerLine: { flex: 1, height: 1, backgroundColor: '#e0e0e0' },
-    dividerText: { marginHorizontal: 12, color: '#aaa', fontSize: 13 },
-    guestBtn: {
-        borderWidth: 1.5, borderColor: COLORS.primary,
-        borderRadius: 14, paddingVertical: 13, alignItems: 'center',
-        backgroundColor: 'transparent',
-    },
-    guestBtnText: { color: COLORS.primary, fontSize: 15, fontWeight: '600' },
-    footer: { flexDirection: 'row', marginTop: 20 },
-    footerText: { color: COLORS.textDark, fontSize: 14 },
-    link: { color: COLORS.primary, fontWeight: '700', fontSize: 14 },
+  label: { color: COLORS.textDark, fontSize: 13, fontWeight: '800', marginBottom: 7, marginTop: 12 },
+  input: {
+    minHeight: 52,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.medium,
+    paddingHorizontal: 15,
+    fontSize: 15,
+    color: COLORS.textDark,
+    backgroundColor: COLORS.surfaceMuted,
+  },
+  inputRow: {
+    minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.medium,
+    backgroundColor: COLORS.surfaceMuted,
+  },
+  inputInner: { flex: 1, height: 52, paddingHorizontal: 15, fontSize: 15, color: COLORS.textDark },
+  visibilityButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 14 },
+  visibilityText: { color: COLORS.primaryDark, fontSize: 12, fontWeight: '800' },
+  inputError: { borderColor: COLORS.danger, backgroundColor: COLORS.dangerSoft },
+  errorText: { color: COLORS.danger, fontSize: 12, lineHeight: 18, marginTop: 5 },
+  errorBox: { marginTop: 16, padding: 12, borderRadius: RADIUS.small, backgroundColor: COLORS.dangerSoft },
+  errorBoxText: { color: COLORS.danger, fontSize: 12, lineHeight: 18, textAlign: 'center', fontWeight: '600' },
+  primaryButton: {
+    minHeight: 52,
+    marginTop: 22,
+    borderRadius: RADIUS.medium,
+    backgroundColor: COLORS.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryText: { color: COLORS.white, fontSize: 16, fontWeight: '800' },
+  disabled: { opacity: 0.55 },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 17 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: COLORS.border },
+  dividerText: { marginHorizontal: 12, color: COLORS.textLight, fontSize: 12, fontWeight: '600' },
+  guestButton: {
+    minHeight: 48,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    borderRadius: RADIUS.medium,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.primarySoft,
+  },
+  guestText: { color: COLORS.primaryDark, fontSize: 14, fontWeight: '800' },
+  guestHint: { color: COLORS.textMuted, fontSize: 11, textAlign: 'center', marginTop: 8 },
+  footerRow: { flexDirection: 'row', alignItems: 'center' },
+  footerText: { color: COLORS.textMuted, fontSize: 14 },
+  link: { color: COLORS.primaryDark, fontSize: 14, fontWeight: '800', marginLeft: 6 },
 });

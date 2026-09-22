@@ -157,7 +157,7 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
 
         {/* ── Header ── */}
@@ -333,7 +333,7 @@ export default function HomeScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#fff' },
+  safe: { flex: 1, backgroundColor: COLORS.background },
   // Header
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
   logoRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
   greetingSub: { fontSize: 15, color: '#888', fontWeight: '500' },
   greetingMain: { fontSize: 26, fontWeight: '900', color: '#2C3E50', marginTop: 4 },
   // Search
-  searchBar: { marginHorizontal: 20, backgroundColor: '#F7F7F7', borderRadius: 14, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13, marginBottom: 16, borderWidth: 1, borderColor: '#EBEBEB' },
+  searchBar: { marginHorizontal: 20, backgroundColor: COLORS.surface, borderRadius: 14, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13, marginBottom: 16, borderWidth: 1, borderColor: COLORS.border },
   searchPlaceholder: { flex: 1, color: '#bbb', fontSize: 14 },
   // Nearby map
   nearbyBanner: { marginHorizontal: 20, marginBottom: 16, padding: 16, borderRadius: 20, backgroundColor: '#EAF3E5', borderWidth: 1, borderColor: '#C8DCBC', flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
   catChip: { alignItems: 'center', backgroundColor: '#FFF5EE', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: '#FFD8B4', gap: 4, minWidth: 72 },
   catLabel: { fontSize: 11, fontWeight: '700', color: '#8B2626', textAlign: 'center' },
   // Card Section
-  cardSection: { marginHorizontal: 20, backgroundColor: '#FFF8F0', borderRadius: 24, padding: 20, alignItems: 'center', marginBottom: 16, borderWidth: 1, borderColor: '#FFDFC0' },
+  cardSection: { marginHorizontal: 20, backgroundColor: COLORS.primarySoft, borderRadius: 24, padding: 20, alignItems: 'center', marginBottom: 16, borderWidth: 1, borderColor: COLORS.border },
   cardTitle: { fontSize: 17, fontWeight: '800', color: '#8B2626', marginBottom: 4 },
   cardSubtitle: { fontSize: 13, color: '#888', marginBottom: 16 },
   cardTouchable: { width: 220, height: 260, alignItems: 'center', justifyContent: 'center' },
@@ -393,14 +393,14 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 14 },
   sectionTitle: { fontSize: 17, fontWeight: '900', color: '#2C3E50' },
   seeAll: { fontSize: 13, color: COLORS.primary, fontWeight: '700' },
-  foodCard: { width: 140, marginRight: 14, backgroundColor: '#fff', borderRadius: 18, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.1, shadowRadius: 6, elevation: 4 },
+  foodCard: { width: 140, marginRight: 14, backgroundColor: COLORS.surface, borderRadius: 18, overflow: 'hidden', shadowColor: COLORS.secondary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
   foodCardImg: { height: 110, justifyContent: 'center', alignItems: 'center' },
   foodCardName: { fontSize: 13, fontWeight: '800', color: '#2C3E50', paddingHorizontal: 10, paddingTop: 8 },
   foodCardCat: { fontSize: 11, color: '#aaa', paddingHorizontal: 10, marginTop: 2 },
   foodCardPrice: { fontSize: 12, color: COLORS.primary, fontWeight: '700', paddingHorizontal: 10, paddingBottom: 10, marginTop: 2 },
   // Quick links
   quickLinks: { flexDirection: 'row', marginHorizontal: 20, gap: 10, marginTop: 4 },
-  quickBtn: { flex: 1, backgroundColor: '#F7F7F7', borderRadius: 16, padding: 14, alignItems: 'center', gap: 6 },
+  quickBtn: { flex: 1, backgroundColor: COLORS.surface, borderRadius: 16, padding: 14, alignItems: 'center', gap: 6, borderWidth: 1, borderColor: COLORS.border },
   quickBtnText: { fontSize: 12, fontWeight: '700', color: '#555', textAlign: 'center' },
 });
 

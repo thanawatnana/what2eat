@@ -45,6 +45,8 @@ test('registration uses a dedicated email PIN screen and gates profile creation'
   assert.match(read('screens/RegisterScreen.js'), /replace\(['"]VerifyEmail['"]/);
   assert.match(read('screens/VerifyEmailScreen.js'), /verifyOtp\([\s\S]*type:\s*['"]email['"]/);
   assert.match(read('screens/VerifyEmailScreen.js'), /resend\(\{\s*type:\s*['"]signup['"]/);
+  assert.match(read('screens/VerifyEmailScreen.js'), /PIN_LENGTH = 6/);
+  assert.match(read('screens/VerifyEmailScreen.js'), /RESEND_SECONDS = 30/);
   assert.match(read('context/AuthContext.js'), /account-register/);
   assert.doesNotMatch(read('context/AuthContext.js'), /createURL|ConfirmationURL/);
   assert.match(read('database/registration_otp.sql'), /email_confirmed_at is null/);
@@ -52,6 +54,7 @@ test('registration uses a dedicated email PIN screen and gates profile creation'
   assert.match(read('supabase/functions/account-register/index.ts'), /email_confirm:\s*true/);
   assert.match(read('supabase/templates/confirmation.html'), /\{\{ \.Token \}\}/);
   assert.doesNotMatch(read('supabase/templates/confirmation.html'), /ConfirmationURL/);
+  assert.doesNotMatch(read('supabase/templates/confirmation.html'), /href\s*=/i);
 });
 
 test('application source contains no emoji characters', () => {

@@ -18,7 +18,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import 'react-native-gesture-handler';
-import { COLORS } from './constants/theme';
+import { COLORS, RADIUS, SHADOWS } from './constants/theme';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 import AllFoodsScreen from './screens/AllFoodsScreen';
@@ -64,8 +64,13 @@ function MainTabs() {
         headerShown: false,
         tabBarStyle: styles.tabBar,
         tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: '#bbb',
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600', marginBottom: 2 },
+        tabBarInactiveTintColor: COLORS.textLight,
+        tabBarActiveBackgroundColor: COLORS.primarySoft,
+        tabBarItemStyle: styles.tabBarItem,
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '700', marginBottom: 2 },
+        headerStyle: { backgroundColor: COLORS.surface },
+        headerShadowVisible: false,
+        headerTitleStyle: { color: COLORS.textDark, fontWeight: '800' },
         // Bug 1 fix: prevent tab screens from being detached which causes freeze
 
       }}
@@ -155,7 +160,13 @@ function AppNavigation() {
   //  ==========================================
   return (
       <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Navigator screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: COLORS.background },
+          headerStyle: { backgroundColor: COLORS.surface },
+          headerShadowVisible: false,
+          headerTitleStyle: { color: COLORS.textDark, fontWeight: '800' },
+        }}>
           {!user ? <Stack.Group navigationKey="signed-out">
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
@@ -186,15 +197,16 @@ const styles = StyleSheet.create({
     height: 72,
     paddingBottom: 10,
     paddingTop: 6,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.surface,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
+    borderTopColor: COLORS.border,
+    shadowColor: SHADOWS.floating.shadowColor,
+    shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 12,
+    shadowRadius: 14,
+    elevation: 10,
   },
+  tabBarItem: { borderRadius: RADIUS.medium, marginHorizontal: 3, marginVertical: 4 },
   centerBtn: {
     top: -22,
     justifyContent: 'center',
@@ -208,13 +220,13 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: COLORS.primary,
+    shadowColor: COLORS.primaryDark,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.45,
     shadowRadius: 8,
     elevation: 10,
   },
-  centerBtnText: { color: '#fff', fontSize: 13, fontWeight: '800' },
-  tabIcon: { color: '#aaa', fontSize: 15, fontWeight: '800' },
+  centerBtnText: { color: COLORS.white, fontSize: 13, fontWeight: '800' },
+  tabIcon: { color: COLORS.textLight, fontSize: 15, fontWeight: '800' },
   tabIconActive: { color: COLORS.primary },
 });

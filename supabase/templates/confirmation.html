@@ -1,4 +1,33 @@
-<h2>ยืนยันการสมัครสมาชิก Joykin</h2>
-<p>กรอกรหัส PIN ด้านล่างในแอปเพื่อยืนยันอีเมล</p>
-<p style="font-size: 32px; font-weight: 700; letter-spacing: 8px;">{{ .Token }}</p>
-<p>รหัสนี้ใช้ได้ครั้งเดียว หากคุณไม่ได้สมัครสมาชิกสามารถละเว้นอีเมลนี้ได้</p>
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>รหัสยืนยัน Joykin</title>
+  </head>
+  <body style="margin:0;padding:0;background:#F8F5F1;font-family:Arial,sans-serif;color:#231F20;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:32px 16px;background:#F8F5F1;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;background:#FFFFFF;border:1px solid #E7DFD9;border-radius:24px;overflow:hidden;">
+            <tr>
+              <td style="height:8px;background:#E7652D;"></td>
+            </tr>
+            <tr>
+              <td style="padding:36px 32px;text-align:center;">
+                <p style="margin:0;color:#542521;font-size:30px;font-weight:800;">Joykin</p>
+                <h1 style="margin:22px 0 8px;font-size:23px;line-height:1.35;">ยืนยันอีเมลของคุณ</h1>
+                <p style="margin:0;color:#746E6B;font-size:15px;line-height:1.6;">กรอก PIN 6 หลักนี้ในแอปเพื่อสมัครสมาชิกให้เสร็จสมบูรณ์</p>
+                <div style="margin:28px 0;padding:20px 14px;border-radius:16px;background:#FFF0E7;color:#542521;font-size:34px;font-weight:800;letter-spacing:10px;">
+                  {{ .Token }}
+                </div>
+                <p style="margin:0;color:#746E6B;font-size:13px;line-height:1.6;">รหัสนี้ใช้ได้เพียงครั้งเดียว กรุณาอย่าส่งต่อให้ผู้อื่น</p>
+                <p style="margin:18px 0 0;color:#8A817D;font-size:12px;line-height:1.6;">หากคุณไม่ได้สมัครสมาชิก Joykin สามารถละเว้นอีเมลฉบับนี้ได้</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

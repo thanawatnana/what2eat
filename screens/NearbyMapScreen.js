@@ -202,7 +202,7 @@ export default function NearbyMapScreen({ route }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#FFF' },
+  safe: { flex: 1, backgroundColor: COLORS.background },
   content: { paddingBottom: 32 },
   intro: { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 14 },
   title: { fontSize: 25, fontWeight: '900', color: '#2C3E50' },
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
   map: { flex: 1 },
   mapLoading: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.88)' },
   loadingText: { color: '#666', marginTop: 10, fontSize: 13, fontWeight: '600' },
-  detailCard: { margin: 20, marginBottom: 8, padding: 18, borderRadius: 20, backgroundColor: '#FFF8F0', borderWidth: 1, borderColor: '#FFD8B4' },
+  detailCard: { margin: 20, marginBottom: 8, padding: 18, borderRadius: 20, backgroundColor: COLORS.primarySoft, borderWidth: 1, borderColor: COLORS.border },
   detailHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   placeName: { fontSize: 18, fontWeight: '900', color: '#2C3E50' },
   placeMeta: { marginTop: 3, color: COLORS.secondary, fontSize: 12, fontWeight: '700' },
@@ -232,8 +232,8 @@ const styles = StyleSheet.create({
   listHeader: { paddingHorizontal: 20, marginTop: 18, marginBottom: 10 },
   listTitle: { fontSize: 18, fontWeight: '900', color: '#2C3E50' },
   listHint: { fontSize: 12, color: '#888', marginTop: 3 },
-  placeCard: { marginHorizontal: 20, marginBottom: 10, padding: 13, borderRadius: 16, backgroundColor: '#F8F8F8', flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: '#EEE' },
-  placeCardSelected: { borderColor: COLORS.primary, backgroundColor: '#FFF8F0' },
+  placeCard: { marginHorizontal: 20, marginBottom: 10, padding: 13, borderRadius: 16, backgroundColor: COLORS.surface, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: COLORS.border },
+  placeCardSelected: { borderColor: COLORS.primary, backgroundColor: COLORS.primarySoft },
   placeInitial: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.secondary },
   placeInitialText: { color: '#FFF', fontSize: 17, fontWeight: '900' },
   placeCardName: { fontSize: 14, fontWeight: '800', color: '#333' },
