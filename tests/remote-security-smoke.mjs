@@ -13,6 +13,11 @@ assert(rowsError, 'anonymous users table read must be denied');
 const { error: partyError } = await client.rpc('party', { p_action: 'snapshot', p_payload: {} });
 assert(partyError, 'anonymous party RPC must be denied');
 
+for (const table of ['admin_users', 'advertisements', 'food_preferences']) {
+  const { error } = await client.from(table).select('*').limit(1);
+  assert(error, `anonymous ${table} read must be denied`);
+}
+
 const response = await fetch(`${SUPABASE_URL}/functions/v1/account-login`, {
   method: 'POST',
   headers: { apikey: SUPABASE_PUBLISHABLE_KEY, 'Content-Type': 'application/json' },

@@ -18,6 +18,7 @@ export default function SettingsScreen({ navigation }) {
   const [avatar, setAvatar] = useState(null);
   //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [uploading, setUploading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Task 5: Editable display name
   //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
@@ -30,6 +31,21 @@ export default function SettingsScreen({ navigation }) {
   useEffect(() => {
     setAvatar(user?.is_guest ? null : user?.profile_image_url || null);
   }, [user]);
+
+  useEffect(() => {
+    let active = true;
+    const checkAdmin = async () => {
+      if (!user?.id || user.is_guest) {
+        if (active) setIsAdmin(false);
+        return;
+      }
+      const { data } = await supabase.from('admin_users')
+        .select('user_id').eq('user_id', user.id).maybeSingle();
+      if (active) setIsAdmin(Boolean(data));
+    };
+    checkAdmin();
+    return () => { active = false; };
+  }, [user?.id, user?.is_guest]);
 
   useEffect(() => navigation.addListener('blur', () => {
     setIsEditingName(false);
@@ -239,6 +255,16 @@ export default function SettingsScreen({ navigation }) {
           </View>
         </View>
 
+        {isAdmin && (
+          <TouchableOpacity style={styles.adminBtn} onPress={() => navigation.navigate('AdminAds')}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.adminBtnTitle}>จัดการโฆษณา</Text>
+              <Text style={styles.adminBtnSub}>เพิ่ม แก้ไข เปิดปิด และลบโฆษณา</Text>
+            </View>
+            <Text style={styles.adminBtnAction}>เปิด</Text>
+          </TouchableOpacity>
+        )}
+
         {/* ปุ่ม logout */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
           <Text style={styles.logoutBtnText}>ออกจากระบบ</Text>
@@ -303,6 +329,10 @@ const styles = StyleSheet.create({
   },
   avatarInitial: { fontSize: 46, color: COLORS.secondary, fontWeight: '900' },
   guestWarningText: { flex: 1, fontSize: 13, fontWeight: '700', color: '#856404', lineHeight: 18 },
+  adminBtn: { width: '100%', flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.secondary, padding: 16, borderRadius: 14, marginBottom: 14 },
+  adminBtnTitle: { color: '#FFF', fontSize: 15, fontWeight: '900' },
+  adminBtnSub: { color: 'rgba(255,255,255,0.75)', fontSize: 11, marginTop: 3 },
+  adminBtnAction: { color: '#FFF', fontSize: 12, fontWeight: '900' },
   // Logout
   logoutBtn: { width: '100%', backgroundColor: '#FFF0F0', padding: 16, borderRadius: 14, alignItems: 'center' },
   logoutBtnText: { color: '#E74C3C', fontSize: 16, fontWeight: 'bold' },

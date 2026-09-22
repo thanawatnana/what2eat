@@ -15,6 +15,12 @@ import {
 } from 'react-native';
 import { COLORS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
+import {
+  foodPreferenceKey,
+  loadFoodPreferences,
+  preferenceFor,
+  saveFoodPreference,
+} from '../services/foodPreferences';
 import { supabase } from '../supabase';
 
 // Task 4 + Task 3: Category dropdown options
@@ -25,6 +31,8 @@ export default function AllFoodsScreen({ navigation }) {
   const { user } = useAuth();
   //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [foods, setFoods] = useState([]);
+  const [preferences, setPreferences] = useState(new Map());
+  const [togglingFood, setTogglingFood] = useState(null);
   //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [loading, setLoading] = useState(true);
 
@@ -73,15 +81,17 @@ export default function AllFoodsScreen({ navigation }) {
   const loadFoods = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
-    const [{ data: systemFoods }, { data: userFoods }] = await Promise.all([
+    const [{ data: systemFoods }, { data: userFoods }, nextPreferences] = await Promise.all([
       supabase.from('foods').select('*').order('created_at'),
       supabase.from('user_foods').select('*').eq('user_id', user.id).order('created_at'),
+      loadFoodPreferences(user.id),
     ]);
     const combined = [
       ...(systemFoods || []).map(f => ({ ...f, source: 'system' })),
       ...(userFoods || []).map(f => ({ ...f, source: 'custom' })),
     ];
     setFoods(combined);
+    setPreferences(nextPreferences);
     setLoading(false);
   }, [user?.id]);
 
@@ -104,12 +114,34 @@ export default function AllFoodsScreen({ navigation }) {
       { text: 'ยกเลิก', style: 'cancel' },
       {
         text: 'ลบ', style: 'destructive', onPress: async () => {
+          await supabase.from('food_preferences').delete()
+            .eq('user_id', user.id).eq('food_source', 'custom').eq('food_id', item.id);
           const { error } = await supabase.from('user_foods').delete().eq('id', item.id).eq('user_id', user.id);
           if (!error) setFoods(prev => prev.filter(f => f.id !== item.id));
           else Alert.alert('Error', error.message);
         }
       }
     ]);
+  };
+
+  const toggleFoodHidden = async (item) => {
+    const key = foodPreferenceKey(item.source, item.id);
+    if (togglingFood === key) return;
+    const current = preferenceFor(preferences, item);
+    const nextHidden = !current.is_hidden;
+    setTogglingFood(key);
+    try {
+      const next = await saveFoodPreference(user.id, item, current, { is_hidden: nextHidden });
+      setPreferences((previous) => {
+        const updated = new Map(previous);
+        updated.set(key, next);
+        return updated;
+      });
+    } catch (error) {
+      Alert.alert('บันทึกไม่สำเร็จ', error.message);
+    } finally {
+      setTogglingFood(null);
+    }
   };
 
   // ── Image Picker helper ───────────────────────────────────────────────────
@@ -233,8 +265,12 @@ export default function AllFoodsScreen({ navigation }) {
 
 
   // ── Render แต่ละ item ─────────────────────────────────────────────────────
-  const renderItem = ({ item }) => (
-    <View style={styles.card}>
+  const renderItem = ({ item }) => {
+    const preference = preferenceFor(preferences, item);
+    const hidden = preference.is_hidden;
+    const preferenceKey = foodPreferenceKey(item.source, item.id);
+    return (
+    <View style={[styles.card, hidden && styles.cardHidden]}>
       {/* รูปภาพหรือ emoji */}
       {item.image_url ? (
         <Image source={{ uri: item.image_url }} style={styles.foodImage} />
@@ -243,8 +279,9 @@ export default function AllFoodsScreen({ navigation }) {
       )}
       <View style={styles.info}>
         <View style={styles.nameRow}>
-          <Text style={styles.name}>{item.name}</Text>
+          <Text style={[styles.name, hidden && styles.nameHidden]}>{item.name}</Text>
           {item.source === 'custom' && <Text style={styles.customBadge}>ของคุณ</Text>}
+          {hidden && <Text style={styles.hiddenBadge}>ซ่อนอยู่</Text>}
         </View>
         <View style={styles.tagContainer}>
           <Text style={styles.tag}>{item.category}</Text>
@@ -252,7 +289,21 @@ export default function AllFoodsScreen({ navigation }) {
         </View>
       </View>
       {/* Task 4: ปุ่ม Edit + Delete (เฉพาะเมนูของตัวเอง) */}
-      {item.source === 'custom' && (
+      <View style={styles.actionColumn}>
+        <TouchableOpacity
+          style={[styles.hideBtn, hidden && styles.showBtn]}
+          onPress={() => toggleFoodHidden(item)}
+          disabled={togglingFood === preferenceKey}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: hidden, disabled: togglingFood === preferenceKey }}
+          accessibilityLabel={`${hidden ? 'แสดง' : 'ซ่อน'}เมนู ${item.name}`}
+        >
+          {togglingFood === preferenceKey
+            ? <ActivityIndicator size="small" color={COLORS.secondary} />
+            : <Text style={styles.hideBtnText}>{hidden ? 'แสดง' : 'ซ่อน'}</Text>
+          }
+        </TouchableOpacity>
+        {item.source === 'custom' && (
         <View style={styles.actionBtns}>
           <TouchableOpacity style={styles.editBtn} onPress={() => openEditModal(item)}>
             <Text style={styles.editBtnText}>แก้ไข</Text>
@@ -261,9 +312,11 @@ export default function AllFoodsScreen({ navigation }) {
             <Text style={styles.deleteBtnText}>ลบ</Text>
           </TouchableOpacity>
         </View>
-      )}
+        )}
+      </View>
     </View>
   );
+  };
 
   if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={COLORS.primary} /></View>;
 
@@ -277,7 +330,7 @@ export default function AllFoodsScreen({ navigation }) {
     <View style={styles.container}>
       <FlatList
         data={foods}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => foodPreferenceKey(item.source, item.id)}
         renderItem={renderItem}
         contentContainerStyle={styles.listContainer}
         ListHeaderComponent={
@@ -414,17 +467,24 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white, flexDirection: 'row', padding: 14, borderRadius: 16, marginBottom: 12, alignItems: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
   },
+  cardHidden: { opacity: 0.52, backgroundColor: '#ECECEC' },
   foodImage: { width: 56, height: 56, borderRadius: 10, marginRight: 14 },
   foodFallback: { width: 56, height: 56, borderRadius: 10, marginRight: 14, backgroundColor: '#F3E8E0', justifyContent: 'center', alignItems: 'center' },
   foodFallbackText: { color: COLORS.secondary, fontSize: 24, fontWeight: '900' },
   info: { flex: 1 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   name: { fontSize: 16, fontWeight: 'bold', color: COLORS.textDark, flexShrink: 1 },
+  nameHidden: { color: '#777', textDecorationLine: 'line-through' },
   customBadge: { fontSize: 11, color: COLORS.primary, fontWeight: '700' },
+  hiddenBadge: { fontSize: 10, color: '#666', fontWeight: '800' },
   tagContainer: { flexDirection: 'row', gap: 8 },
   tag: { backgroundColor: COLORS.accent, color: COLORS.white, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, fontSize: 11, fontWeight: 'bold', overflow: 'hidden' },
   priceTag: { backgroundColor: COLORS.background, color: COLORS.secondary, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, fontSize: 11, fontWeight: 'bold', borderWidth: 1, borderColor: COLORS.secondary, overflow: 'hidden' },
+  actionColumn: { alignItems: 'flex-end', gap: 3 },
   actionBtns: { flexDirection: 'row', gap: 4 },
+  hideBtn: { minWidth: 52, paddingHorizontal: 9, paddingVertical: 7, borderRadius: 10, backgroundColor: '#F1E6DD', alignItems: 'center' },
+  showBtn: { backgroundColor: '#E2E7DF' },
+  hideBtnText: { fontSize: 11, color: COLORS.secondary, fontWeight: '800' },
   editBtn: { padding: 8 },
   editBtnText: { fontSize: 11, color: COLORS.secondary, fontWeight: '700' },
   deleteBtn: { padding: 8 },

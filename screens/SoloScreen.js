@@ -32,6 +32,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
+import {
+  buildRandomPool,
+  foodPreferenceKey,
+  isFoodHidden,
+  isFoodSelected,
+  loadFoodPreferences,
+  preferenceFor,
+  saveFoodPreference,
+} from '../services/foodPreferences';
 import { supabase } from '../supabase';
 import * as Location from 'expo-location';
 
@@ -55,6 +64,9 @@ export default function SoloScreen({ navigation }) {
   // ── State หลัก ──────────────────────────────────────────────────────────
   //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [allFoods, setAllFoods] = useState([]);
+  const [preferences, setPreferences] = useState(new Map());
+  const [selectionModalVisible, setSelectionModalVisible] = useState(false);
+  const [savingSelection, setSavingSelection] = useState(null);
   //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [currentFood, setCurrentFood] = useState(null);
   //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
@@ -97,15 +109,17 @@ export default function SoloScreen({ navigation }) {
     if (!user?.id) return;
     setLoadingFoods(true);
     try {
-      const [{ data: systemFoods }, { data: userFoods }] = await Promise.all([
+      const [{ data: systemFoods }, { data: userFoods }, nextPreferences] = await Promise.all([
         supabase.from('foods').select('*').order('created_at'),
         supabase.from('user_foods').select('*').eq('user_id', user.id).order('created_at'),
+        loadFoodPreferences(user.id),
       ]);
       const combined = [
         ...(systemFoods || []).map(f => ({ ...f, source: 'system' })),
         ...(userFoods || []).map(f => ({ ...f, source: 'custom' })),
       ];
       setAllFoods(combined);
+      setPreferences(nextPreferences);
     } catch (err) {
       //  โชว์กล่องข้อความแจ้งเตือนผู้ใช้
       Alert.alert('Error', err.message);
@@ -139,8 +153,32 @@ export default function SoloScreen({ navigation }) {
   // ── สุ่มอาหาร + บันทึก history ────────────────────────────────
   // Bug 4 fix: กรองอาหารตาม categories ที่เลือก (multi-select)
   const getFilteredFoods = () => {
-    if (selectedCategories.length === 0) return allFoods; // ว่าง = ทั้งหมด
-    return allFoods.filter(f => selectedCategories.includes(f.category));
+    return buildRandomPool(allFoods, preferences, selectedCategories);
+  };
+
+  const toggleFoodSelection = async (food) => {
+    if (food.source !== 'system' || isFoodHidden(preferences, food)) return;
+    const key = foodPreferenceKey(food.source, food.id);
+    if (savingSelection === key) return;
+    const current = preferenceFor(preferences, food);
+    setSavingSelection(key);
+    try {
+      const next = await saveFoodPreference(user.id, food, current, {
+        is_selected: !isFoodSelected(preferences, food),
+      });
+      setPreferences((previous) => {
+        const updated = new Map(previous);
+        updated.set(key, next);
+        return updated;
+      });
+      setCurrentFood(null);
+      setIsFlipped(false);
+      flipAnim.setValue(0);
+    } catch (error) {
+      Alert.alert('บันทึกไม่สำเร็จ', error.message);
+    } finally {
+      setSavingSelection(null);
+    }
   };
 
   // Bug 4 fix: Toggle category in/out of selection array
@@ -206,6 +244,11 @@ export default function SoloScreen({ navigation }) {
   const backRotate  = flipAnim.interpolate({ inputRange: [0, 180], outputRange: ['180deg', '360deg'] });
   const frontOpacity = flipAnim.interpolate({ inputRange: [89, 90], outputRange: [1, 0] });
   const backOpacity  = flipAnim.interpolate({ inputRange: [89, 90], outputRange: [0, 1] });
+  const activePool = getFilteredFoods();
+  const systemFoods = allFoods.filter((food) => food.source === 'system');
+  const activeCustomCount = allFoods.filter(
+    (food) => food.source === 'custom' && !isFoodHidden(preferences, food),
+  ).length;
 
   // ── บันทึก Favorite ───────────────────────────────────────────
   const saveToFavorites = async () => {
@@ -355,6 +398,17 @@ export default function SoloScreen({ navigation }) {
         })}
       </ScrollView>
 
+      <TouchableOpacity
+        style={styles.selectionButton}
+        onPress={() => setSelectionModalVisible(true)}
+        accessibilityRole="button"
+      >
+        <Text style={styles.selectionButtonTitle}>เลือกเมนูสำหรับสุ่ม</Text>
+        <Text style={styles.selectionButtonSub}>
+          พร้อมสุ่ม {activePool.length} รายการ รวมเมนูส่วนตัว {activeCustomCount} รายการ
+        </Text>
+      </TouchableOpacity>
+
       {/* ── Mystery Card Flip ── */}
       <View style={styles.cardSection}>
         {loadingFoods ? (
@@ -365,7 +419,7 @@ export default function SoloScreen({ navigation }) {
           <TouchableOpacity 
             onPress={randomizeFood} 
             activeOpacity={0.9} 
-            disabled={isFlipping || allFoods.length === 0} 
+            disabled={isFlipping || activePool.length === 0}
             style={styles.cardTouchable}
           >
             {/* ── หน้าการ์ด (?) ── */}
@@ -421,9 +475,9 @@ export default function SoloScreen({ navigation }) {
 
       {/* ปุ่มหลัก */}
       <TouchableOpacity 
-        style={[styles.randomButton, (isFlipping || allFoods.length === 0) && { opacity: 0.6 }]} 
+        style={[styles.randomButton, (isFlipping || activePool.length === 0) && { opacity: 0.6 }]}
         onPress={randomizeFood} 
-        disabled={isFlipping || allFoods.length === 0}
+        disabled={isFlipping || activePool.length === 0}
       >
         <Text style={styles.randomButtonText}>
           {isFlipping ? ' กำลังเปิดเผย...' : isFlipped ? ' สุ่มใหม่อีกครั้ง' : ' เริ่มสุ่มเมนู'}
@@ -446,6 +500,51 @@ export default function SoloScreen({ navigation }) {
       <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}>
         <Text style={styles.addBtnText}>เพิ่มเมนูส่วนตัว</Text>
       </TouchableOpacity>
+
+      <Modal
+        visible={selectionModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSelectionModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.selectionModalCard}>
+            <Text style={styles.modalTitle}>เลือกเมนูระบบสำหรับสุ่ม</Text>
+            <Text style={styles.selectionHelp}>
+              เมนูส่วนตัวที่ไม่ถูกซ่อนจะถูกรวมให้อัตโนมัติ
+            </Text>
+            <ScrollView style={styles.selectionList} contentContainerStyle={styles.selectionListContent}>
+              {systemFoods.map((food) => {
+                const hidden = isFoodHidden(preferences, food);
+                const selected = isFoodSelected(preferences, food) && !hidden;
+                const key = foodPreferenceKey(food.source, food.id);
+                return (
+                  <TouchableOpacity
+                    key={key}
+                    style={[styles.selectionRow, hidden && styles.selectionRowDisabled]}
+                    onPress={() => toggleFoodSelection(food)}
+                    disabled={hidden || savingSelection === key}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: selected, disabled: hidden || savingSelection === key }}
+                  >
+                    <View style={[styles.checkbox, selected && styles.checkboxChecked]}>
+                      {selected ? <Text style={styles.checkboxText}>เลือก</Text> : null}
+                    </View>
+                    <View style={styles.selectionInfo}>
+                      <Text style={[styles.selectionName, hidden && styles.selectionNameDisabled]}>{food.name}</Text>
+                      <Text style={styles.selectionCategory}>{hidden ? 'เมนูนี้ถูกซ่อน' : food.category}</Text>
+                    </View>
+                    {savingSelection === key ? <ActivityIndicator size="small" color={COLORS.primary} /> : null}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+            <TouchableOpacity style={styles.selectionDoneButton} onPress={() => setSelectionModalVisible(false)}>
+              <Text style={styles.selectionDoneText}>เสร็จสิ้น</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* ── Modal เพิ่มเมนู (Task 3: ไม่มี emoji / มีรูป + category dropdown) ── */}
       <Modal visible={modalVisible} transparent animationType="slide" onRequestClose={() => { resetForm(); setModalVisible(false); }}>
@@ -580,6 +679,12 @@ const styles = StyleSheet.create({
   filterChipActive: { backgroundColor: COLORS.secondary, borderColor: COLORS.secondary },
   filterChipText: { fontSize: 12, fontWeight: '700', color: '#8B2626' },
   filterChipTextActive: { color: '#FFF' },
+  selectionButton: {
+    width: '85%', backgroundColor: '#FFF', borderRadius: 16, borderWidth: 1, borderColor: '#E2D7CE',
+    paddingHorizontal: 16, paddingVertical: 12, marginTop: 10,
+  },
+  selectionButtonTitle: { fontSize: 14, color: COLORS.secondary, fontWeight: '900' },
+  selectionButtonSub: { fontSize: 11, color: '#777', marginTop: 3 },
   cardSection: {
     width: '100%',
     alignItems: 'center',
@@ -646,6 +751,21 @@ const styles = StyleSheet.create({
   addBtnText: { color: COLORS.secondary, fontSize: 14, fontWeight: '700' },
   // ── Modal ──
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  selectionModalCard: { maxHeight: '82%', backgroundColor: '#FFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 34 },
+  selectionHelp: { fontSize: 12, color: '#777', lineHeight: 18, textAlign: 'center', marginBottom: 12 },
+  selectionList: { flexGrow: 0 },
+  selectionListContent: { paddingBottom: 6 },
+  selectionRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
+  selectionRowDisabled: { opacity: 0.45, backgroundColor: '#F2F2F2' },
+  checkbox: { width: 42, height: 26, borderRadius: 8, borderWidth: 1.5, borderColor: '#B8B8B8', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
+  checkboxChecked: { backgroundColor: COLORS.secondary, borderColor: COLORS.secondary },
+  checkboxText: { color: '#FFF', fontSize: 9, fontWeight: '900' },
+  selectionInfo: { flex: 1 },
+  selectionName: { color: COLORS.textDark, fontSize: 14, fontWeight: '800' },
+  selectionNameDisabled: { textDecorationLine: 'line-through', color: '#777' },
+  selectionCategory: { color: '#888', fontSize: 11, marginTop: 2 },
+  selectionDoneButton: { backgroundColor: COLORS.secondary, borderRadius: 14, paddingVertical: 13, alignItems: 'center', marginTop: 16 },
+  selectionDoneText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
   // Bug 5 fix: flexGrow ensures modal content stays at the bottom
   modalScroll: { justifyContent: 'flex-end', flexGrow: 1 },
   modalCard: { backgroundColor: COLORS.white, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 28, paddingBottom: 40 },

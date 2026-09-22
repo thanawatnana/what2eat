@@ -25,7 +25,7 @@ export function imageBytes(base64) {
 }
 
 export async function uploadImage({ base64, userId, bucket = 'food-images' }) {
-  if (!userId || !['food-images', 'avatars'].includes(bucket)) throw new Error('กรุณาเข้าสู่ระบบใหม่');
+  if (!userId || !['food-images', 'avatars', 'advertisements'].includes(bucket)) throw new Error('กรุณาเข้าสู่ระบบใหม่');
   const { bytes, contentType, extension } = imageBytes(base64);
   const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${extension}`;
   const { error } = await supabase.storage.from(bucket).upload(path, bytes, {

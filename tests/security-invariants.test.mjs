@@ -67,7 +67,7 @@ test('nearby map has live data and a visible demo fallback', () => {
   assert.match(read('services/nearbyPlaces.js'), /overpass-api\.de/);
   assert.match(read('services/nearbyPlaces.js'), /overpass\.private\.coffee/);
   assert.match(read('services/nearbyPlaces.js'), /createDemoPlaces/);
-  assert.match(read('screens/HomeScreen.js'), /097-9253802/);
+  assert.match(read('components/AdCarousel.js'), /097-9253802/);
   assert.match(read('App.js'), /NearbyMapScreen/);
 });
 
@@ -78,4 +78,23 @@ test('random results can open map search for the selected food', () => {
   }
   assert.match(read('screens/NearbyMapScreen.js'), /route\?\.params\?\.foodName/);
   assert.match(read('services/nearbyPlaces.js'), /rankPlacesForFood/);
+});
+
+test('advertisements and food preferences are protected by RLS', () => {
+  const sql = read('database/dynamic_ads_and_food_preferences.sql');
+  assert.match(sql, /alter table public\.advertisements enable row level security/i);
+  assert.match(sql, /alter table public\.food_preferences enable row level security/i);
+  assert.match(sql, /select joykin_private\.is_admin\(\)/i);
+  assert.match(sql, /user_id = \(select auth\.uid\(\)\)/i);
+  assert.match(sql, /payment_amount > 0/i);
+  assert.match(sql, /advertisement_images_admin_insert/i);
+});
+
+test('hidden foods are removed before any local random selection', () => {
+  const service = read('services/foodPreferences.js');
+  assert.match(service, /if \(isFoodHidden\(preferences, food\)\) return false/);
+  assert.match(read('screens/HomeScreen.js'), /buildRandomPool/);
+  assert.match(read('screens/SoloScreen.js'), /buildRandomPool/);
+  assert.match(read('screens/AllFoodsScreen.js'), /toggleFoodHidden/);
+  assert.match(read('database/dynamic_ads_and_food_preferences.sql'), /room_foods_skip_hidden/i);
 });

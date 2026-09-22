@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
   Image,
-  Linking,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -11,22 +10,15 @@ import {
   Text, TouchableOpacity,
   View
 } from 'react-native';
+import AdCarousel from '../components/AdCarousel';
 import { COLORS } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
+import { buildRandomPool, loadFoodPreferences } from '../services/foodPreferences';
 import { supabase } from '../supabase';
 
 const WHEEL_ITEMS = [
   { color: '#E74C3C' }, { color: '#E67E22' }, { color: '#F39C12' }, { color: '#27AE60' },
   { color: '#2980B9' }, { color: '#8E44AD' }, { color: '#16A085' }, { color: '#D35400' },
-];
-
-const CATEGORIES = [
-  { label: 'อาหารไทย', value: 'Thai' },
-  { label: 'ญี่ปุ่น', value: 'Japanese' },
-  { label: 'สุขภาพ', value: 'Healthy' },
-  { label: 'คาเฟ่', value: 'Cafe' },
-  { label: 'ฟาสต์ฟู้ด', value: 'Fast Food' },
-  { label: 'ปาร์ตี้', value: 'Party' },
 ];
 
 //  ฟังก์ชันหลักของหน้าจอนี้ (Component)
@@ -48,10 +40,19 @@ export default function HomeScreen({ navigation }) {
   //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [avatar, setAvatar] = useState(null);
 
-  const loadFoods = async () => {
-    const { data } = await supabase.from('foods').select('*');
-    if (data) setFoods(data);
-  };
+  const loadFoods = useCallback(async () => {
+    if (!user?.id) return;
+    const [{ data: systemFoods }, { data: customFoods }, preferences] = await Promise.all([
+      supabase.from('foods').select('*').order('created_at'),
+      supabase.from('user_foods').select('*').eq('user_id', user.id).order('created_at'),
+      loadFoodPreferences(user.id),
+    ]);
+    const combined = [
+      ...(systemFoods || []).map((food) => ({ ...food, source: 'system' })),
+      ...(customFoods || []).map((food) => ({ ...food, source: 'custom' })),
+    ];
+    setFoods(buildRandomPool(combined, preferences));
+  }, [user?.id]);
 
   const loadFavorites = async () => {
     if (!user) return;
@@ -68,6 +69,7 @@ export default function HomeScreen({ navigation }) {
   useEffect(() => { 
     loadFoods();
     const unsubscribe = navigation.addListener('focus', () => {
+      loadFoods();
       loadFavorites();
       loadAvatar();
     });
@@ -75,7 +77,7 @@ export default function HomeScreen({ navigation }) {
     loadFavorites();
     loadAvatar();
     return unsubscribe;
-  }, [navigation, user]);
+  }, [navigation, user, loadFoods]);
 
   const getGreeting = () => {
     const h = new Date().getHours();
@@ -164,9 +166,6 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.logoText}>Joykin</Text>
           </View>
           <View style={styles.headerRight}>
-            <TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('Search')}>
-              <Text style={styles.headerIconText}>ค้นหา</Text>
-            </TouchableOpacity>
             <TouchableOpacity style={styles.avatarBtn} onPress={() => navigation.navigate('AccountTab')}>
               {avatar ? (
                 <Image source={{ uri: avatar }} style={{ width: 40, height: 40, borderRadius: 20 }} />
@@ -188,20 +187,7 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.searchPlaceholder}>ค้นหาอาหาร, เมนู, หรือหมวดหมู่...</Text>
         </TouchableOpacity>
 
-        <View style={styles.adSection}>
-          <View style={styles.adTopRow}>
-            <Text style={styles.adLabel}>พื้นที่โฆษณา</Text>
-            <Text style={styles.adSlot}>ตำแหน่งหน้าแรก</Text>
-          </View>
-          <View style={styles.adImagePlaceholder}>
-            <Text style={styles.adPlaceholderTitle}>พื้นที่สำหรับรูปโปรโมทร้าน</Text>
-            <Text style={styles.adPlaceholderSub}>รองรับรูปแนวนอนของร้าน เมนู หรือโปรโมชัน</Text>
-          </View>
-          <Text style={styles.adTitle}>สนใจโปรโมทร้านบน Joykin</Text>
-          <TouchableOpacity onPress={() => Linking.openURL('tel:0979253802')}>
-            <Text style={styles.adPhone}>ติดต่อ 097-9253802</Text>
-          </TouchableOpacity>
-        </View>
+        <AdCarousel />
 
         <TouchableOpacity style={styles.nearbyBanner} onPress={() => navigation.navigate('NearbyMap')} activeOpacity={0.85}>
           <View style={styles.nearbyPin}>
@@ -354,8 +340,6 @@ const styles = StyleSheet.create({
   logoText: { fontSize: 22, fontWeight: '900', color: '#2C3E50' },
   logo2: { color: COLORS.primary },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  headerIconBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#f5f5f5', justifyContent: 'center', alignItems: 'center' },
-  headerIconText: { color: COLORS.secondary, fontSize: 9, fontWeight: '800' },
   avatarBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFE8D6', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: COLORS.primary },
   avatarInitial: { color: COLORS.secondary, fontSize: 18, fontWeight: '800' },
   // Greeting
@@ -365,16 +349,6 @@ const styles = StyleSheet.create({
   // Search
   searchBar: { marginHorizontal: 20, backgroundColor: '#F7F7F7', borderRadius: 14, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13, marginBottom: 16, borderWidth: 1, borderColor: '#EBEBEB' },
   searchPlaceholder: { flex: 1, color: '#bbb', fontSize: 14 },
-  // Advertising
-  adSection: { marginHorizontal: 20, marginBottom: 14, padding: 16, borderRadius: 20, backgroundColor: '#F7F7F7', borderWidth: 1, borderColor: '#E5E5E5' },
-  adTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  adLabel: { color: COLORS.secondary, fontSize: 12, fontWeight: '900' },
-  adSlot: { color: '#AAA', fontSize: 10, fontWeight: '600' },
-  adImagePlaceholder: { height: 110, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#C8C8C8', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, backgroundColor: '#FFF' },
-  adPlaceholderTitle: { fontSize: 15, color: '#666', fontWeight: '800', textAlign: 'center' },
-  adPlaceholderSub: { fontSize: 11, color: '#AAA', marginTop: 5, textAlign: 'center' },
-  adTitle: { marginTop: 12, fontSize: 14, fontWeight: '800', color: '#333' },
-  adPhone: { marginTop: 3, fontSize: 16, fontWeight: '900', color: COLORS.primary },
   // Nearby map
   nearbyBanner: { marginHorizontal: 20, marginBottom: 16, padding: 16, borderRadius: 20, backgroundColor: '#EAF3E5', borderWidth: 1, borderColor: '#C8DCBC', flexDirection: 'row', alignItems: 'center', gap: 12 },
   nearbyPin: { width: 46, height: 46, borderRadius: 23, backgroundColor: COLORS.accent, alignItems: 'center', justifyContent: 'center' },
