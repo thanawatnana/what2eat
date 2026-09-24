@@ -23,6 +23,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 
 import AllFoodsScreen from './screens/AllFoodsScreen';
 import AdminAdsScreen from './screens/AdminAdsScreen';
+import AdminRestaurantsScreen from './screens/AdminRestaurantsScreen';
 import FavScreen from './screens/FavScreen';
 import HistoryScreen from './screens/HistoryScreen';
 import HomeScreen from './screens/HomeScreen';
@@ -31,6 +32,7 @@ import LoginScreen from './screens/LoginScreen';
 import NearbyMapScreen from './screens/NearbyMapScreen';
 import PartyScreen from './screens/PartyScreen';
 import RegisterScreen from './screens/RegisterScreen';
+import RestaurantPortalScreen from './screens/RestaurantPortalScreen';
 import ResultScreen from './screens/ResultScreen';
 import SearchScreen from './screens/SearchScreen';
 import SettingsScreen from './screens/SettingsScreen';
@@ -180,6 +182,8 @@ function AppNavigation() {
           <Stack.Screen name="History" component={HistoryScreen} options={({ navigation }) => ({ headerShown: true, title: 'ประวัติการสุ่ม', headerTintColor: COLORS.secondary, headerBackVisible: false, headerLeft: ({ tintColor }) => (<TouchableOpacity onPress={() => navigation.navigate('MainTabs', { screen: 'HomeTab' })} style={{ marginLeft: 8, marginRight: 16 }}><Text style={{ color: tintColor, fontSize: 16, fontWeight: 'bold' }}>{'< หน้าแรก'}</Text></TouchableOpacity>) })} />
           <Stack.Screen name="AllFoods" component={AllFoodsScreen} options={({ navigation }) => ({ headerShown: true, title: 'เมนูอาหารทั้งหมด', headerTintColor: COLORS.secondary, headerBackVisible: false, headerLeft: ({ tintColor }) => (<TouchableOpacity onPress={() => navigation.navigate('MainTabs', { screen: 'HomeTab' })} style={{ marginLeft: 8, marginRight: 16 }}><Text style={{ color: tintColor, fontSize: 16, fontWeight: 'bold' }}>{'< หน้าแรก'}</Text></TouchableOpacity>) })} />
           <Stack.Screen name="AdminAds" component={AdminAdsScreen} options={{ headerShown: true, title: 'จัดการโฆษณา', headerTintColor: COLORS.secondary }} />
+          <Stack.Screen name="AdminRestaurants" component={AdminRestaurantsScreen} options={{ headerShown: true, title: 'ตรวจสอบบัญชีร้าน', headerTintColor: COLORS.secondary }} />
+          <Stack.Screen name="RestaurantPortal" component={RestaurantPortalScreen} options={{ headerShown: true, title: 'บัญชีร้าน', headerTintColor: COLORS.secondary }} />
           <Stack.Screen name="NearbyMap" component={NearbyMapScreen} options={{ headerShown: true, title: 'ร้านใกล้คุณ', headerTintColor: COLORS.secondary }} />
           <Stack.Screen name="Search" component={SearchScreen} options={{ headerShown: true, title: 'ค้นหา' }} />
           </Stack.Group>}

@@ -255,11 +255,31 @@ export default function SettingsScreen({ navigation }) {
           </View>
         </View>
 
+        {!user?.is_guest && (
+          <TouchableOpacity style={styles.businessBtn} onPress={() => navigation.navigate('RestaurantPortal')}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.businessBtnTitle}>บัญชีสำหรับร้านอาหาร</Text>
+              <Text style={styles.businessBtnSub}>สมัครร้าน เลือกแพ็กเกจ และดูผลโฆษณา</Text>
+            </View>
+            <Text style={styles.businessBtnAction}>เปิด</Text>
+          </TouchableOpacity>
+        )}
+
+        {isAdmin && (
+          <TouchableOpacity style={styles.adminBtn} onPress={() => navigation.navigate('AdminRestaurants')}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.adminBtnTitle}>ตรวจสอบบัญชีร้าน</Text>
+              <Text style={styles.adminBtnSub}>อนุมัติ ปฏิเสธ หรือระงับบัญชีร้าน</Text>
+            </View>
+            <Text style={styles.adminBtnAction}>เปิด</Text>
+          </TouchableOpacity>
+        )}
+
         {isAdmin && (
           <TouchableOpacity style={styles.adminBtn} onPress={() => navigation.navigate('AdminAds')}>
             <View style={{ flex: 1 }}>
               <Text style={styles.adminBtnTitle}>จัดการโฆษณา</Text>
-              <Text style={styles.adminBtnSub}>เพิ่ม แก้ไข เปิดปิด และลบโฆษณา</Text>
+              <Text style={styles.adminBtnSub}>ตรวจ อนุมัติ แก้ไข และติดตามแคมเปญ</Text>
             </View>
             <Text style={styles.adminBtnAction}>เปิด</Text>
           </TouchableOpacity>
@@ -329,6 +349,10 @@ const styles = StyleSheet.create({
   },
   avatarInitial: { fontSize: 46, color: COLORS.secondary, fontWeight: '900' },
   guestWarningText: { flex: 1, fontSize: 13, fontWeight: '700', color: '#856404', lineHeight: 18 },
+  businessBtn: { width: '100%', flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.primarySoft, borderWidth: 1, borderColor: COLORS.primary, padding: 16, borderRadius: 14, marginBottom: 14 },
+  businessBtnTitle: { color: COLORS.secondary, fontSize: 15, fontWeight: '900' },
+  businessBtnSub: { color: COLORS.textMuted, fontSize: 11, marginTop: 3 },
+  businessBtnAction: { color: COLORS.primaryDark, fontSize: 12, fontWeight: '900' },
   adminBtn: { width: '100%', flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.secondary, padding: 16, borderRadius: 14, marginBottom: 14 },
   adminBtnTitle: { color: '#FFF', fontSize: 15, fontWeight: '900' },
   adminBtnSub: { color: 'rgba(255,255,255,0.75)', fontSize: 11, marginTop: 3 },

@@ -101,3 +101,47 @@ test('hidden foods are removed before any local random selection', () => {
   assert.match(read('screens/AllFoodsScreen.js'), /toggleFoodHidden/);
   assert.match(read('database/dynamic_ads_and_food_preferences.sql'), /room_foods_skip_hidden/i);
 });
+
+test('business accounts require membership and protect approval fields', () => {
+  const sql = read('supabase/migrations/20260924033252_business_packages_restaurants_targeting.sql');
+  assert.match(sql, /not coalesce\(is_guest, false\)/i);
+  assert.match(sql, /new\.status := 'pending'/i);
+  assert.match(sql, /new\.approved_by := null/i);
+  assert.match(sql, /owner_user_id = \(select auth\.uid\(\)\)/i);
+  assert.match(read('screens/SettingsScreen.js'), /!user\?\.is_guest[\s\S]*RestaurantPortal/);
+  assert.match(read('screens/RestaurantPortalScreen.js'), /restaurant\?\.status !== 'approved'/);
+});
+
+test('advertising packages control price, priority, quota, and duration', () => {
+  const sql = read('supabase/migrations/20260924033252_business_packages_restaurants_targeting.sql');
+  assert.match(sql, /new\.payment_amount := selected_package\.price_amount/i);
+  assert.match(sql, /new\.priority_weight := selected_package\.priority_weight/i);
+  assert.match(sql, /new\.daily_impression_limit := selected_package\.daily_impression_limit/i);
+  assert.match(sql, /new\.duration_days := selected_package\.duration_days/i);
+  assert.match(sql, /Payment must be confirmed before activation/i);
+  assert.match(read('utils/weightedAds.js'), /priority_weight \?\? ad\?\.payment_amount/);
+});
+
+test('targeted ads use opt-in location without storing viewer coordinates', () => {
+  const sql = read('supabase/migrations/20260924033252_business_packages_restaurants_targeting.sql');
+  assert.match(sql, /create or replace function public\.get_targeted_ads/i);
+  assert.match(sql, /target_radius_km/i);
+  assert.match(sql, /target_categories/i);
+  assert.match(sql, /target_start_time/i);
+  assert.match(sql, /create table if not exists public\.ad_daily_stats/i);
+  assert.doesNotMatch(sql, /viewer_(?:latitude|longitude)|user_location/i);
+  assert.match(read('components/AdCarousel.js'), /getForegroundPermissionsAsync/);
+  assert.match(read('components/AdCarousel.js'), /\.rpc\('get_targeted_ads'/);
+  assert.match(read('components/AdCarousel.js'), /\.rpc\('record_ad_event'/);
+});
+
+test('restaurant campaigns and images are owner-scoped with admin review', () => {
+  const sql = read('supabase/migrations/20260924033252_business_packages_restaurants_targeting.sql');
+  assert.match(sql, /alter table public\.restaurants enable row level security/i);
+  assert.match(sql, /alter table public\.ad_daily_stats enable row level security/i);
+  assert.match(sql, /advertisements_business_insert/i);
+  assert.match(sql, /advertisement_images_business_insert/i);
+  assert.match(sql, /storage\.foldername\(name\)\)\[1\] = \(select auth\.uid\(\)\)::text/i);
+  assert.match(read('screens/AdminRestaurantsScreen.js'), /status, rejection_reason/);
+  assert.match(read('screens/AdminAdsScreen.js'), /pending_review/);
+});

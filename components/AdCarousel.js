@@ -1,3 +1,4 @@
+import * as Location from 'expo-location';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { COLORS } from '../constants/theme';
@@ -10,16 +11,28 @@ export default function AdCarousel() {
   const [ads, setAds] = useState([]);
   const [currentAd, setCurrentAd] = useState(null);
   const opacity = useRef(new Animated.Value(1)).current;
+  const impressionKey = useRef(null);
 
   const loadAds = useCallback(async () => {
-    const now = new Date().toISOString();
-    const { data, error } = await supabase
-      .from('advertisements')
-      .select('id, title, image_url, target_url, payment_amount')
-      .eq('is_active', true)
-      .lte('starts_at', now)
-      .or(`ends_at.is.null,ends_at.gt.${now}`)
-      .order('created_at', { ascending: false });
+    let latitude = null;
+    let longitude = null;
+    const permission = await Location.getForegroundPermissionsAsync();
+    if (permission.status === 'granted') {
+      try {
+        const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        latitude = position.coords.latitude;
+        longitude = position.coords.longitude;
+      } catch {
+        latitude = null;
+        longitude = null;
+      }
+    }
+
+    const { data, error } = await supabase.rpc('get_targeted_ads', {
+      p_lat: latitude,
+      p_lng: longitude,
+      p_limit: 20,
+    });
 
     if (error || !data?.length) {
       setAds([]);
@@ -54,8 +67,15 @@ export default function AdCarousel() {
     return () => clearInterval(timer);
   }, [ads, opacity]);
 
+  useEffect(() => {
+    if (!currentAd?.id || impressionKey.current === currentAd.id) return;
+    impressionKey.current = currentAd.id;
+    supabase.rpc('record_ad_event', { p_ad_id: currentAd.id, p_event_type: 'impression' });
+  }, [currentAd?.id]);
+
   const openTarget = async () => {
     if (!currentAd?.target_url) return;
+    await supabase.rpc('record_ad_event', { p_ad_id: currentAd.id, p_event_type: 'click' });
     const supported = await Linking.canOpenURL(currentAd.target_url);
     if (supported) await Linking.openURL(currentAd.target_url);
   };
@@ -87,7 +107,7 @@ export default function AdCarousel() {
     <View style={styles.container}>
       <View style={styles.topRow}>
         <Text style={styles.label}>ผู้สนับสนุน</Text>
-        <Text style={styles.slot}>พื้นที่แนะนำ</Text>
+        <Text style={styles.slot}>{currentAd.package_name || 'พื้นที่แนะนำ'}</Text>
       </View>
       <TouchableOpacity
         disabled={!currentAd.target_url}
