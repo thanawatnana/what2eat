@@ -369,14 +369,20 @@ export default function SoloScreen({ navigation }) {
   return (
     // Task 2: SafeAreaView เพื่อหลีกเลี่ยง notch/status bar
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-
-      {/* Task 4: Category Filter Chips */}
       <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterRow}
-        style={styles.filterScroll}
+        style={styles.screenScroll}
+        contentContainerStyle={styles.screenContent}
+        showsVerticalScrollIndicator={false}
+        nestedScrollEnabled
       >
+        <Text style={styles.filterLabel}>เลือกประเภทอาหาร</Text>
+        {/* Task 4: Category Filter Chips */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterRow}
+          style={styles.filterScroll}
+        >
         {FILTER_CATEGORIES.map((cat) => {
           // Bug 4 fix: multi-select — "All" is active when array is empty
           const isActive = cat.value === 'All'
@@ -396,7 +402,7 @@ export default function SoloScreen({ navigation }) {
             </TouchableOpacity>
           );
         })}
-      </ScrollView>
+        </ScrollView>
 
       <TouchableOpacity
         style={styles.selectionButton}
@@ -500,6 +506,7 @@ export default function SoloScreen({ navigation }) {
       <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}>
         <Text style={styles.addBtnText}>เพิ่มเมนูส่วนตัว</Text>
       </TouchableOpacity>
+      </ScrollView>
 
       <Modal
         visible={selectionModalVisible}
@@ -666,9 +673,12 @@ export default function SoloScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: COLORS.background },
+  screenScroll: { flex: 1, width: '100%' },
+  screenContent: { alignItems: 'center', paddingBottom: 120 },
   // Task 4: Filter chips styles
-  filterScroll: { flexGrow: 0, marginTop: 12, marginBottom: 4 },
+  filterLabel: { width: '100%', paddingHorizontal: 18, marginTop: 14, marginBottom: 8, fontSize: 14, color: COLORS.textDark, fontWeight: '900' },
+  filterScroll: { flexGrow: 0, width: '100%', marginBottom: 4 },
   filterRow: { paddingHorizontal: 16, gap: 8 },
   filterChip: {
     flexDirection: 'row', alignItems: 'center', gap: 5,

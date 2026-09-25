@@ -13,15 +13,24 @@ export function AuthProvider({ children }) {
     if (!session) { setUser(null); setLoading(false); return; }
     setLoading(true);
     try {
-      const { data, error } = await supabase.from('users')
-        .select('id, name_account, username, is_guest, profile_image_url')
-        .eq('id', session.user.id).single();
+      const [profileResult, adminResult] = await Promise.all([
+        supabase.from('users')
+          .select('id, name_account, username, is_guest, profile_image_url')
+          .eq('id', session.user.id).single(),
+        supabase.from('admin_users')
+          .select('user_id')
+          .eq('user_id', session.user.id).maybeSingle(),
+      ]);
+      const error = profileResult.error || adminResult.error;
       if (error && retries > 0) {
         await new Promise(resolve => setTimeout(resolve, 250));
         if (version === generation.current) return loadSession(session, retries - 1);
       }
       if (error) throw error;
-      if (version === generation.current) { setUser(data); setAuthError(''); }
+      if (version === generation.current) {
+        setUser({ ...profileResult.data, is_admin: Boolean(adminResult.data) });
+        setAuthError('');
+      }
     } catch {
       if (version === generation.current) { setUser(null); setAuthError('โหลดบัญชีไม่สำเร็จ กรุณาลองเข้าสู่ระบบอีกครั้ง'); }
     } finally { if (version === generation.current) setLoading(false); }

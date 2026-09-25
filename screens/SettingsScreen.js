@@ -18,7 +18,7 @@ export default function SettingsScreen({ navigation }) {
   const [avatar, setAvatar] = useState(null);
   //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [uploading, setUploading] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const isAdmin = Boolean(user?.is_admin);
 
   // Task 5: Editable display name
   //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
@@ -31,21 +31,6 @@ export default function SettingsScreen({ navigation }) {
   useEffect(() => {
     setAvatar(user?.is_guest ? null : user?.profile_image_url || null);
   }, [user]);
-
-  useEffect(() => {
-    let active = true;
-    const checkAdmin = async () => {
-      if (!user?.id || user.is_guest) {
-        if (active) setIsAdmin(false);
-        return;
-      }
-      const { data } = await supabase.from('admin_users')
-        .select('user_id').eq('user_id', user.id).maybeSingle();
-      if (active) setIsAdmin(Boolean(data));
-    };
-    checkAdmin();
-    return () => { active = false; };
-  }, [user?.id, user?.is_guest]);
 
   useEffect(() => navigation.addListener('blur', () => {
     setIsEditingName(false);

@@ -32,7 +32,9 @@ export default function AllFoodsScreen({ navigation }) {
   //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [foods, setFoods] = useState([]);
   const [preferences, setPreferences] = useState(new Map());
+  const [favoriteNames, setFavoriteNames] = useState(new Set());
   const [togglingFood, setTogglingFood] = useState(null);
+  const [togglingFavorite, setTogglingFavorite] = useState(null);
   //  สร้าง State สำหรับเก็บและอัปเดตข้อมูลบนหน้าจอ
   const [loading, setLoading] = useState(true);
 
@@ -81,10 +83,11 @@ export default function AllFoodsScreen({ navigation }) {
   const loadFoods = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
-    const [{ data: systemFoods }, { data: userFoods }, nextPreferences] = await Promise.all([
+    const [{ data: systemFoods }, { data: userFoods }, nextPreferences, { data: favorites }] = await Promise.all([
       supabase.from('foods').select('*').order('created_at'),
       supabase.from('user_foods').select('*').eq('user_id', user.id).order('created_at'),
       loadFoodPreferences(user.id),
+      supabase.from('favorites').select('food_name').eq('user_id', user.id),
     ]);
     const combined = [
       ...(systemFoods || []).map(f => ({ ...f, source: 'system' })),
@@ -92,6 +95,7 @@ export default function AllFoodsScreen({ navigation }) {
     ];
     setFoods(combined);
     setPreferences(nextPreferences);
+    setFavoriteNames(new Set((favorites || []).map(favorite => favorite.food_name)));
     setLoading(false);
   }, [user?.id]);
 
@@ -141,6 +145,34 @@ export default function AllFoodsScreen({ navigation }) {
       Alert.alert('บันทึกไม่สำเร็จ', error.message);
     } finally {
       setTogglingFood(null);
+    }
+  };
+
+  const toggleFavorite = async (item) => {
+    const key = foodPreferenceKey(item.source, item.id);
+    if (togglingFavorite === key) return;
+    const isFavorite = favoriteNames.has(item.name);
+    setTogglingFavorite(key);
+    try {
+      const result = isFavorite
+        ? await supabase.from('favorites').delete()
+          .eq('user_id', user.id).eq('food_name', item.name)
+        : await supabase.rpc('save_favorite', {
+          p_name: item.name,
+          p_category: item.category || 'Custom',
+          p_image: item.image_url || null,
+        });
+      if (result.error) throw result.error;
+      setFavoriteNames((previous) => {
+        const updated = new Set(previous);
+        if (isFavorite) updated.delete(item.name);
+        else updated.add(item.name);
+        return updated;
+      });
+    } catch (error) {
+      Alert.alert('บันทึกรายการโปรดไม่สำเร็จ', error.message);
+    } finally {
+      setTogglingFavorite(null);
     }
   };
 
@@ -269,6 +301,7 @@ export default function AllFoodsScreen({ navigation }) {
     const preference = preferenceFor(preferences, item);
     const hidden = preference.is_hidden;
     const preferenceKey = foodPreferenceKey(item.source, item.id);
+    const isFavorite = favoriteNames.has(item.name);
     return (
     <View style={[styles.card, hidden && styles.cardHidden]}>
       {/* รูปภาพหรือ emoji */}
@@ -290,6 +323,21 @@ export default function AllFoodsScreen({ navigation }) {
       </View>
       {/* Task 4: ปุ่ม Edit + Delete (เฉพาะเมนูของตัวเอง) */}
       <View style={styles.actionColumn}>
+        <TouchableOpacity
+          style={[styles.favoriteBtn, isFavorite && styles.favoriteBtnActive]}
+          onPress={() => toggleFavorite(item)}
+          disabled={togglingFavorite === preferenceKey}
+          accessibilityRole="button"
+          accessibilityState={{ selected: isFavorite, disabled: togglingFavorite === preferenceKey }}
+          accessibilityLabel={`${isFavorite ? 'นำออกจาก' : 'เพิ่มใน'}รายการโปรด ${item.name}`}
+        >
+          {togglingFavorite === preferenceKey
+            ? <ActivityIndicator size="small" color={COLORS.primary} />
+            : <Text style={[styles.favoriteBtnText, isFavorite && styles.favoriteBtnTextActive]}>
+              {isFavorite ? 'บันทึกแล้ว' : 'รายการโปรด'}
+            </Text>
+          }
+        </TouchableOpacity>
         <TouchableOpacity
           style={[styles.hideBtn, hidden && styles.showBtn]}
           onPress={() => toggleFoodHidden(item)}
@@ -482,6 +530,10 @@ const styles = StyleSheet.create({
   priceTag: { backgroundColor: COLORS.background, color: COLORS.secondary, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10, fontSize: 11, fontWeight: 'bold', borderWidth: 1, borderColor: COLORS.secondary, overflow: 'hidden' },
   actionColumn: { alignItems: 'flex-end', gap: 3 },
   actionBtns: { flexDirection: 'row', gap: 4 },
+  favoriteBtn: { minWidth: 72, paddingHorizontal: 9, paddingVertical: 7, borderRadius: 10, borderWidth: 1, borderColor: '#E7B8B1', backgroundColor: '#FFF7F5', alignItems: 'center' },
+  favoriteBtnActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  favoriteBtnText: { fontSize: 10, color: COLORS.primary, fontWeight: '800' },
+  favoriteBtnTextActive: { color: COLORS.white },
   hideBtn: { minWidth: 52, paddingHorizontal: 9, paddingVertical: 7, borderRadius: 10, backgroundColor: '#F1E6DD', alignItems: 'center' },
   showBtn: { backgroundColor: '#E2E7DF' },
   hideBtnText: { fontSize: 11, color: COLORS.secondary, fontWeight: '800' },

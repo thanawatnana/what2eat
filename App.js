@@ -57,11 +57,14 @@ function CenterTabButton({ children, onPress }) {
 }
 
 function MainTabs() {
+  const { user } = useAuth();
   //  ==========================================
   //  ส่วนแสดงผลหน้าตาแอป (UI / Frontend)
   //  ==========================================
   return (
-    <Tab.Navigator detachInactiveScreens={false}
+    <Tab.Navigator
+      detachInactiveScreens={false}
+      initialRouteName={user?.is_admin ? 'AccountTab' : 'HomeTab'}
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,

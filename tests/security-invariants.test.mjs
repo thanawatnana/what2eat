@@ -15,6 +15,13 @@ test('password hashes are not accessed by application screens', () => {
   for (const file of files) assert.doesNotMatch(read(file), /password_hash|bcrypt/i, file);
 });
 
+test('admin role is loaded with the session and opens the account controls', () => {
+  assert.match(read('context/AuthContext.js'), /from\(['"]admin_users['"]\)/);
+  assert.match(read('context/AuthContext.js'), /is_admin:\s*Boolean\(adminResult\.data\)/);
+  assert.match(read('App.js'), /initialRouteName=\{user\?\.is_admin \? ['"]AccountTab['"] : ['"]HomeTab['"]\}/);
+  assert.match(read('screens/SettingsScreen.js'), /Boolean\(user\?\.is_admin\)/);
+});
+
 test('party screens mutate state only through the atomic RPC', () => {
   const source = ['screens/PartyScreen.js', 'screens/LobbyScreen.js', 'screens/SwipeScreen.js']
     .map(read).join('\n');
@@ -100,6 +107,16 @@ test('hidden foods are removed before any local random selection', () => {
   assert.match(read('screens/SoloScreen.js'), /buildRandomPool/);
   assert.match(read('screens/AllFoodsScreen.js'), /toggleFoodHidden/);
   assert.match(read('database/dynamic_ads_and_food_preferences.sql'), /room_foods_skip_hidden/i);
+});
+
+test('food list supports favorite toggles and solo controls remain scrollable', () => {
+  const allFoods = read('screens/AllFoodsScreen.js');
+  assert.match(allFoods, /from\(['"]favorites['"]\)\.select\(['"]food_name['"]\)/);
+  assert.match(allFoods, /rpc\(['"]save_favorite['"]/);
+  assert.match(allFoods, /toggleFavorite/);
+  const solo = read('screens/SoloScreen.js');
+  assert.match(solo, /contentContainerStyle=\{styles\.screenContent\}/);
+  assert.match(solo, /เลือกประเภทอาหาร/);
 });
 
 test('business accounts require membership and protect approval fields', () => {
